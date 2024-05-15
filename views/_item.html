@@ -1,5 +1,5 @@
 <div class="item">
-    <a href="/rooms/{{item['item_pk']}}">
+    <a href="/item/{{item['item_pk']}}">
         <div class="flex flex-col justify-between mt-2">
             <img src="/images/{{item['item_splash_image']}}" 
     class="w-full h-48 aspect-square object-cover rounded-lg">
@@ -24,11 +24,12 @@
             nat
         </span>
         % if get("is_logged", False):
-            <form id="{{rooms["item_pk"]}}">
+            <form id="{{item["item_pk"]}}">
                 <input name="item_id" type="text" value="{{item["item_pk"]}}">
                 <button
-                    mix-data="[id='{{item['item_pk']}}']"
+                    mix-data="[id='{{item['item_pk]}}']"
                     mix-post="/toogle_item_block"
+                   
                 >
                     Block
                 </button>
