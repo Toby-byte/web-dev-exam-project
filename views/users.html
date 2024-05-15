@@ -1,11 +1,12 @@
 %include("_header")
-<h1>Users</h1>
-<div id="users">
+<main>
+    <h1>Users</h1>
     <div id="users">
         % for user in users:
             % include("_user.html")
         % end
     </div>
-</div>
+    <p id="message"></p>
+</main>
 
 % include("_footer")

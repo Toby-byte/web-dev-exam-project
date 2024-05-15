@@ -90,7 +90,7 @@ def _():
         # """
     except Exception as ex:
         ic(ex)
-        if "user_name" in str(ex):
+        if "username" in str(ex):
             return f"""
             <template mix-target="#message">
                 {ex.args[1]}
@@ -390,7 +390,63 @@ def get_user(key):
     except Exception as ex:
         ic(ex)
         return {"error": str(ex)}
-    
+##############################
+@delete("/users/<key>")
+def _(key):
+    try:
+        # Regex validation for key
+        if not re.match(r"^[1-9]\d*$", key):
+            return "Invalid key format"
+
+        ic(key)
+        res = x.arango({"query":"""
+                    FOR user IN users
+                    FILTER user._key == @key
+                    REMOVE user IN users RETURN OLD""", 
+                    "bindVars":{"key":key}})
+        print(res)
+        return f"""
+        <template mix-target="[id='{key}']" mix-replace>
+            <div class="mix-fade-out user_deleted" mix-ttl="2000">User deleted</div>
+        </template>
+        """
+    except Exception as ex:
+        ic(ex)
+        return "An error occurred"
+    finally:
+        pass
+
+
+##############################
+@put("/users/<key>")
+def _(key):
+    try:
+        username = x.validate_user_username()
+        email = x.validate_email()
+        res = x.arango({"query":"""
+                        UPDATE { _key: @key, username: @username, email: @email} 
+                        IN users 
+                        RETURN NEW""",
+                    "bindVars":{
+                        "key": f"{key}",
+                        "username":f"{username}",
+                        "email":f"{email}"
+                    }})
+        return f"""
+        <template mix-target="[id='{key}']" mix-before>
+            <div class="mix-fade-out user_deleted" mix-ttl="2000">User updated</div>            
+        </template>
+        """
+    except Exception as ex:
+        ic(ex)
+        if "username" in str(ex):
+            return f"""
+            <template mix-target="#message">
+                {ex.args[1]}
+            </template>
+            """ 
+    finally:
+        pass
 ##############################
 try:
     import production

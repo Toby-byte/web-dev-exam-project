@@ -84,9 +84,9 @@ EMAIL_REGEX = "^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@(
 
 def validate_email():
     error = f"email invalid"
-    user_email = request.forms.get("user_email", "").strip()
-    if not re.match(EMAIL_REGEX, user_email): raise Exception(error, 400)
-    return user_email
+    email = request.forms.get("email", "").strip()
+    if not re.match(EMAIL_REGEX, email): raise Exception(error, 400)
+    return email
 
 ##############################
 
@@ -96,9 +96,9 @@ USER_USERNAME_REGEX = "^[a-z]{2,20}$"
 
 def validate_user_username():
     error = f"username {USER_USERNAME_MIN} to {USER_USERNAME_MAX} lowercase english letters"
-    user_username = request.forms.get("user_username", "").strip()
-    if not re.match(USER_USERNAME_REGEX, user_username): raise Exception(error, 400)
-    return user_username
+    username = request.forms.get("username", "").strip()
+    if not re.match(USER_USERNAME_REGEX, username): raise Exception(error, 400)
+    return username
 
 ##############################
 
