@@ -6,7 +6,7 @@
 # import sys
 # sys.path.insert(0, str(pathlib.Path(__file__).parent.resolve())+"/bottle")
 from bottle import default_app, put, delete, get, post, request, response, run, static_file, template
-import x
+import x, re
 from icecream import ic
 import bcrypt
 import json
@@ -364,7 +364,34 @@ def _(id):
         pass
 
 ##############################
+@get("/users")
+def _():
+    try:
+        q = {"query": "FOR user IN users RETURN user"}
+        users = x.arango(q)
+        ic(users)
+        return template("users", users=users["result"])
+    except Exception as ex:
+        ic(ex)
+        return {"error": str(ex)}
 
+##############################
+@get("/users/<key>")
+def get_user(key):
+    try:
+        q = {"query": "FOR user IN users FILTER user._key == @key RETURN user", "bindVars": {"key": key}}
+        users = x.arango(q)
+        if not users:
+            response.status = 404
+            return {"error": "User not found"}
+        user = users[0]  # ArangoDB returns a list of results
+        ic(user)
+        return template("index", users=users["result"])
+    except Exception as ex:
+        ic(ex)
+        return {"error": str(ex)}
+    
+##############################
 try:
     import production
     application = default_app()
