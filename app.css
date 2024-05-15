@@ -756,6 +756,7 @@ video {
   width: 100%;
 }
 
+<<<<<<< HEAD
 .w-\[calc\(80\%-0\.5rem\)\] {
   width: calc(80% - 0.5rem);
 }
@@ -797,6 +798,9 @@ video {
 }
 
   .w-1\/2 {
+=======
+.w-1\/2 {
+>>>>>>> 560deeb6d11a0d6852f01752050361cd018d21cf
   width: 50%;
 }
 
@@ -1067,6 +1071,7 @@ video {
   font-weight: 500;
 }
 
+<<<<<<< HEAD
 .font-normal {
   font-weight: 400;
 }
@@ -1079,6 +1084,8 @@ video {
   font-weight: 600;
 }
 
+=======
+>>>>>>> 560deeb6d11a0d6852f01752050361cd018d21cf
 .uppercase {
   text-transform: uppercase;
 }
