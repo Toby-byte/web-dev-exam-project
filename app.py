@@ -226,6 +226,13 @@ def _():
         user_password = request.forms.get("user_password")
         print(user_password)
 
+        res = {
+                "query": "FOR user IN users FILTER user.user_email == @email RETURN user",
+                "bindVars": {"email": user_email}
+                }
+        user = x.arango(res)
+        print("This is a responce!!!: " + str(user["result"][0]["user_email"]) + " " + str(user["result"][0]["user_password"]))
+
         for user in users:
             if user_email == user["email"] and user_password == user["password"]:
                 return "login success"
