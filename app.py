@@ -39,24 +39,29 @@ def _(item_splash_image):
 @get("/")
 def _():
     try:
-        db = x.db()
-        q = db.execute("SELECT * FROM items ORDER BY item_created_at LIMIT 0, ?", (x.ITEMS_PER_PAGE,))
-        items = q.fetchall()
+        x.setup_collection()
+        # Fetch items from the ArangoDB collection 'items'
+        query = {
+            "query": "FOR item IN items SORT item.item_created_at LIMIT @limit RETURN item",
+            "bindVars": {"limit": x.ITEMS_PER_PAGE}
+        }
+        result = x.arango(query)
+        items = result.get("result", [])
         ic(items)
         is_logged = False
-        try:    
+        try:
             x.validate_user_logged()
             is_logged = True
         except:
             pass
 
-        return template("index.html", items=items, mapbox_token=credentials.mapbox_token, 
-                        is_logged=is_logged)
+        return template("index.html", items=items, mapbox_token=credentials.mapbox_token, is_logged=is_logged)
     except Exception as ex:
         ic(ex)
-        return ex
+        return str(ex)
     finally:
-        if "db" in locals(): db.close()
+        pass
+
 
 @get("/signup")
 def _():
@@ -104,16 +109,23 @@ def _():
 @get("/items/page/<page_number>")
 def _(page_number):
     try:
-        db = x.db()
-        next_page = int(page_number) + 1
-        offset = (int(page_number) - 1) * x.ITEMS_PER_PAGE
-        q = db.execute(f"""     SELECT * FROM items 
-                                ORDER BY item_created_at 
-                                LIMIT ? OFFSET {offset}
-                        """, (x.ITEMS_PER_PAGE,))
-        items = q.fetchall()
+        page_number = int(page_number)
+        if page_number < 1:
+            raise ValueError("Page number must be greater than 0")
+        
+        offset = (page_number - 1) * x.ITEMS_PER_PAGE
+        query = {
+            "query": "FOR item IN items SORT item.item_created_at LIMIT @offset, @limit RETURN item",
+            "bindVars": {
+                "offset": offset,
+                "limit": x.ITEMS_PER_PAGE
+            }
+        }
+        result = x.arango(query)
+        items = result.get("result", [])
         ic(items)
 
+        html = ""
         is_logged = False
         try:
             x.validate_user_logged()
@@ -121,12 +133,14 @@ def _(page_number):
         except:
             pass
 
-        html = ""
-        for item in items: 
+        for item in items:
             html += template("_item", item=item, is_logged=is_logged)
+        
+        next_page = page_number + 1
         btn_more = template("__btn_more", page_number=next_page)
-        if len(items) < x.ITEMS_PER_PAGE: 
+        if len(items) < x.ITEMS_PER_PAGE:
             btn_more = ""
+
         return f"""
         <template mix-target="#items" mix-bottom>
             {html}
@@ -140,7 +154,7 @@ def _(page_number):
         ic(ex)
         return "ups..."
     finally:
-        if "db" in locals(): db.close()
+        pass
 
 
 ##############################
@@ -348,20 +362,28 @@ def _(key):
 @get("/rooms/<id>")
 def _(id):
     try:
-        db = x.db()
-        q = db.execute("SELECT * FROM items WHERE item_pk = ?", (id,))
-        item = q.fetchone()
-        title = "Item "+id
+        item_key_data = id
+        item_key_name = "_key"
+        query = {
+            "query": "FOR item IN items FILTER item[@key_name] == @key_data RETURN item",
+            "bindVars": {"key_name": item_key_name, "key_data": item_key_data}
+        }
+        result = x.arango(query)
+        items = result.get("result", [])
+        if not items:
+            response.status = 404
+            return {"error": "Item not found"}
+        
+        item = items[0]  # There should be only one item with the specified ID
+        title = f"Item {id}"
         ic(item)
         return template("rooms",
                         id=id, 
                         title=title,
                         item=item)
     except Exception as ex:
-        print(ex)
-        return "error"
-    finally:
-        pass
+        ic(ex)
+        return {"error": str(ex)}
 
 ##############################
 @get("/users")
