@@ -14,26 +14,26 @@
             </span>
         </div>
     </a>
-    <div>
-        <span class="font-medium">
-            % price = int(item["item_price_per_night"])
-            % price = "{:,.0f}".format(price).replace(",", ".")
-            {{ price }} DKK
-        </span>
-        <span>
-            nat
-        </span>
-        % if get("is_logged", False):
-            <form id="{{item["item_pk"]}}">
-                <input name="item_id" type="text" value="{{item["item_pk"]}}">
-                <button
-                    mix-data="[id='{{item['item_pk]}}']"
-                    mix-post="/toogle_item_block"
-                   
-                >
-                    Block
-                </button>
-            </form>
-        % end
-    </div>
+   <div>
+    <span class="font-medium">
+        % price = int(item["item_price_per_night"])
+        % price = "{:,.0f}".format(price).replace(",", ".")
+        {{ price }} DKK
+    </span>
+    <span>
+        nat
+    </span>
+    % if get("is_logged", False):
+        <form id="{{ item['item_pk'] }}">
+            <input name="item_id" type="text" value="{{ item['item_pk'] }}">
+            <input type="hidden" name="button_state" value="Block"> <!-- Hidden input to track button state -->
+            <button
+                mix-data="[id='{{ item['item_pk'] }}']"
+                mix-post="/toggle_item_state" 
+            >
+                Block
+            </button>
+        </form>
+    % end
+</div>
 </div>

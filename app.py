@@ -260,24 +260,82 @@ def _():
 
 
 ##############################
+
+@post("/toggle_item_state")
+def toggle_item_state():
+    try:
+        item_id = request.forms.get("item_id", '')
+        current_button_text = request.forms.get("button_text", '')  # Get the current text of the button
+        
+        # Determine the new button text based on the current text
+        if current_button_text == "Unblock":
+            new_button_text = "Block"
+        else:
+            new_button_text = "Unblock"
+        
+        # Return HTML content to update the button
+        return f"""
+        <template mix-target="[id='{item_id}']" mix-replace>
+            <form id="{item_id}">
+                <input name="item_id" type="text" value="{item_id}">
+                <input type="hidden" name="button_text" value="{new_button_text}"> <!-- Update hidden input value -->
+                <button
+                    mix-data="[id='{item_id}']"
+                    mix-post="/toggle_item_state"
+                >
+                    {new_button_text}
+                </button>
+            </form>
+        </template>
+        """
+    except Exception as ex:
+        ic(ex)
+        return str(ex)
+    finally:
+        if "db" in locals(): db.close()
+
+
+
+
+
+
+
+
+
 @post("/toogle_item_block")
 def _():
     try:
         item_id = request.forms.get("item_id", '')
         return f"""
         <template mix-target="[id='{item_id}']" mix-replace>
-       
             <button>
-                Unblock
+            Unblock
             </button>
         </template>
         """
     except Exception as ex:
-        ic(ex)
-        return ex
-    finally:
         pass
-    
+    finally:
+        if "db" in locals(): db.close()
+
+
+@post("/toogle_item_unblock")
+def _():
+    try:
+        item_id = request.forms.get("item_id", '')
+        return f"""
+        <template mix-target="[id='{item_id}']" mix-replace>
+            <button>
+            Block
+            </button>
+        </template>
+        """
+    except Exception as ex:
+        pass
+    finally:
+        if "db" in locals(): db.close()
+
+
 ##############################
 @get("/arango/items")
 def _():
@@ -348,15 +406,15 @@ def _(key):
         pass
 
 ##############################
-@get("/rooms/<id>")
+@get("/item/<id>")
 def _(id):
     try:
         db = x.db()
         q = db.execute("SELECT * FROM items WHERE item_pk = ?", (id,))
         item = q.fetchone()
-        title = "Item "+id
+        title = "Items "+id
         ic(item)
-        return template("rooms",
+        return template("items.html",
                         id=id, 
                         title=title,
                         item=item)
