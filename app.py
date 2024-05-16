@@ -5,7 +5,7 @@
 # import pathlib
 # import sys
 # sys.path.insert(0, str(pathlib.Path(__file__).parent.resolve())+"/bottle")
-from bottle import default_app, put, delete, get, post, request, response, run, static_file, template
+from bottle import default_app, put, delete, get, post, request, response, run, static_file, template, redirect
 import x
 from icecream import ic
 import bcrypt
@@ -145,47 +145,47 @@ def _():
 ##############################
 ##############################
 ##############################
-@post("/signup")
-def _():
-    # password = b'password'
-    # # Adding the salt to password
-    # salt = bcrypt.gensalt()
-    # # Hashing the password
-    # hashed = bcrypt.hashpw(password, salt)
-    # # printing the salt
-    # print("Salt :")
-    # print(salt)
+# @post("/signup")
+# def _():
+#     # password = b'password'
+#     # # Adding the salt to password
+#     # salt = bcrypt.gensalt()
+#     # # Hashing the password
+#     # hashed = bcrypt.hashpw(password, salt)
+#     # # printing the salt
+#     # print("Salt :")
+#     # print(salt)
     
-    # # printing the hashed
-    # print("Hashed")
-    # print(hashed)    
-    return "signup"
+#     # # printing the hashed
+#     # print("Hashed")
+#     # print(hashed)    
+#     return "signup"
 
 @get("/signup")
 def _():
     try:
-        return template("signup.html")
+        return template("signup_wu_mixhtml.html")
     except Exception as ex:
         print("there was a problem loading the page")
         print(ex)
         return ex
     
-@post("/users")
+@post("/signup")
 def _():
     try:
         username = x.validate_user_username() # validation of username using method from x.py file
+        print("username recived: " + username)
         email = x.validate_email() # validation of user_last_name using method from x.py file
+        print("email recived: " + email)
         password = x.validate_password()
+        print("password recived: " + password)
         ic(username) # this is ice cream it displays error codes when something goes wrong
-        print(username)
         ic(password)
-        print(password)
         ic(email) # this is ice cream it displays error codes when something goes wrong
-        print(email)
         user = {"username":username, "user_email":email, "user_password":password} # defines a user by saving user as a document
         res = {"query":"INSERT @doc IN users RETURN NEW", "bindVars":{"doc":user}} # inserts a user via AQL query language, via the db method in the x.py file
         item = x.arango(res)
-        return item
+        return template("login.html")
     except Exception as ex:
         ic(ex)
         if "user_name" in str(ex):
