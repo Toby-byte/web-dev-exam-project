@@ -197,11 +197,11 @@ def _():
     finally:
         pass
 
-##############################
-@get("/login")
-def _():
-    x.no_cache()
-    return template("login.html")
+# ##############################
+# @get("/login")
+# def _():
+#     x.no_cache()
+#     return template("login.html")
 
 ##############################
 @get("/logout")
@@ -212,7 +212,7 @@ def _():
     return
 
 ##############################
-@get("/login2")
+@get("/login")
 def _():
     x.no_cache()
     return template("login_wu_mixhtml.html")
