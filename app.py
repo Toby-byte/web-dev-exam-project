@@ -12,6 +12,21 @@ import bcrypt
 import json
 import credentials
 
+users = [
+    {"id":"1",
+     "name":"a",
+     "last_name": "aa",
+     "email": "a@a.com",
+     "password": "pass1"
+     },
+     {"id":"2",
+     "name":"b",
+     "last_name": "bb",
+     "email": "b@b.com",
+     "password": "pass2"
+     },
+]
+
 ##############################
 @get("/app.css")
 def _():
@@ -58,47 +73,6 @@ def _():
     finally:
         if "db" in locals(): db.close()
 
-@get("/signup")
-def _():
-    try:
-        return template("signup.html")
-    except Exception as ex:
-        print("there was a problem loading the page")
-        print(ex)
-        return ex
-    
-@post("/users")
-def _():
-    try:
-        username = x.validate_user_username() # validation of username using method from x.py file
-        email = x.validate_email() # validation of user_last_name using method from x.py file
-        ic(username) # this is ice cream it displays error codes when something goes wrong
-        ic(email) # this is ice cream it displays error codes when something goes wrong
-        user = {"username":username, "email":email} # defines a user by saving user as a document
-        res = {"query":"INSERT @doc IN users RETURN NEW", "bindVars":{"doc":user}} # inserts a user via AQL query language, via the db method in the x.py file
-        item = x.arango(res)
-        return item
-        # html = template("_user.html", user=res["result"][0]) # not sure, a HTML template that is used for displaying a user?
-        # form_create_user =  template("_form_create_user.html") # template again
-        # return f"""
-        # <template mix-target="#users" mix-top>
-        #     {html}
-        # </template>
-        # <template mix-target="#frm_user" mix-replace>
-        #     {form_create_user}
-        # </template>
-        # """
-    except Exception as ex:
-        ic(ex)
-        if "user_name" in str(ex):
-            return f"""
-            <template mix-target="#message">
-                {ex.args[1]}
-            </template>
-            """            
-    finally:
-        pass
-
 
 ##############################
 @get("/items/page/<page_number>")
@@ -144,13 +118,6 @@ def _(page_number):
 
 
 ##############################
-@get("/login")
-def _():
-    x.no_cache()
-    return template("login.html")
-
-
-##############################
 @get("/profile")
 def _():
     try:
@@ -168,16 +135,6 @@ def _():
         return
     finally:
         if "db" in locals(): db.close()
-
-
-##############################
-@get("/logout")
-def _():
-    response.delete_cookie("user")
-    response.status = 303
-    response.set_header('Location', '/login')
-    return
-
 
 ##############################
 @get("/api")
@@ -204,6 +161,81 @@ def _():
     # print(hashed)    
     return "signup"
 
+@get("/signup")
+def _():
+    try:
+        return template("signup.html")
+    except Exception as ex:
+        print("there was a problem loading the page")
+        print(ex)
+        return ex
+    
+@post("/users")
+def _():
+    try:
+        username = x.validate_user_username() # validation of username using method from x.py file
+        email = x.validate_email() # validation of user_last_name using method from x.py file
+        password = x.validate_password()
+        ic(username) # this is ice cream it displays error codes when something goes wrong
+        print(username)
+        ic(password)
+        print(password)
+        ic(email) # this is ice cream it displays error codes when something goes wrong
+        print(email)
+        user = {"username":username, "user_email":email, "user_password":password} # defines a user by saving user as a document
+        res = {"query":"INSERT @doc IN users RETURN NEW", "bindVars":{"doc":user}} # inserts a user via AQL query language, via the db method in the x.py file
+        item = x.arango(res)
+        return item
+    except Exception as ex:
+        ic(ex)
+        if "user_name" in str(ex):
+            return f"""
+            <template mix-target="#message">
+                {ex.args[1]}
+            </template>
+            """            
+    finally:
+        pass
+
+##############################
+@get("/login")
+def _():
+    x.no_cache()
+    return template("login.html")
+
+##############################
+@get("/logout")
+def _():
+    response.delete_cookie("user")
+    response.status = 303
+    response.set_header('Location', '/login')
+    return
+
+##############################
+@get("/login2")
+def _():
+    x.no_cache()
+    return template("login_wu_mixhtml.html")
+
+# this works now
+@post("/login_arango")
+def _():
+    try:
+        user_email = request.forms.get("user_email")
+        print(user_email)
+        user_password = request.forms.get("user_password")
+        print(user_password)
+
+        for user in users:
+            if user_email == user["email"] and user_password == user["password"]:
+                return "login success"
+
+        return "login failed"
+    except Exception as ex:
+        print(ex)
+        return ex
+    finally:
+        pass
 
 ##############################
 @post("/login")
@@ -257,6 +289,45 @@ def _():
 
     finally:
         if "db" in locals(): db.close()
+
+# @post("/login_arango")
+# def login_arango():
+#     try:
+#         # Validate user credentials
+#         user_email = x.validate_email()  # Validation of email
+#         user_password = x.validate_password()  # Validation of password
+
+#         # Prepare and execute the AQL query to find the user
+#         res = {
+#             "query": "FOR user IN users FILTER user.email == @email LIMIT 1 RETURN user",
+#             "bindVars": {"email": user_email}
+#         }
+#         user = x.arango(res)
+
+#         if not user:
+#             raise Exception("User not found", 400)
+#         if not bcrypt.checkpw(user_password.encode(), user['password'].encode()):
+#             raise Exception("Invalid credentials", 400)
+
+#         user.pop('password')  # Remove password from the user dictionary
+
+#         # Setting a secure, HTTP-only cookie
+#         response.set_cookie("user", user, secret=x.COOKIE_SECRET, httponly=True, secure=True)
+
+#         # Return a redirect or another form of success response
+#         return template("<template mix-redirect='/profile'></template>")
+#     except Exception as ex:
+#         response.status = ex.args[1] if len(ex.args) > 1 else 500
+#         return f"""
+#         <template mix-target="#toast">
+#             <div mix-ttl="3000" class="error">
+#                 {ex.args[0]}
+#             </div>
+#         </template>
+#         """
+#     finally:
+#         # No explicit database connection to close with x.arango method
+#         pass
 
 
 ##############################

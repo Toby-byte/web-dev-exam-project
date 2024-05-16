@@ -31,6 +31,7 @@ INSERT INTO users VALUES(
     0
 );
 
+SELECT * FROM users
 
 DROP TABLE IF EXISTS items;
 
@@ -80,20 +81,3 @@ LIMIT 9,3;
 SELECT * FROM items 
 ORDER BY item_created_at
 LIMIT 3 OFFSET 9;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
