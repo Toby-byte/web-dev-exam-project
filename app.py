@@ -73,13 +73,15 @@ def _():
         username = x.validate_user_username() # validation of username using method from x.py file
         email = x.validate_email() # validation of user_last_name using method from x.py file
         ic(username) # this is ice cream it displays error codes when something goes wrong
+        print(username)
         ic(email) # this is ice cream it displays error codes when something goes wrong
+        print(email)
         user = {"username":username, "email":email} # defines a user by saving user as a document
         res = {"query":"INSERT @doc IN users RETURN NEW", "bindVars":{"doc":user}} # inserts a user via AQL query language, via the db method in the x.py file
         item = x.arango(res)
         return item
-        # html = template("_user.html", user=res["result"][0]) # not sure, a HTML template that is used for displaying a user?
-        # form_create_user =  template("_form_create_user.html") # template again
+        html = template("_user.html", user=res["result"][0]) # not sure, a HTML template that is used for displaying a user?
+        form_create_user =  template("_form_create_user.html") # template again
         # return f"""
         # <template mix-target="#users" mix-top>
         #     {html}
@@ -274,6 +276,30 @@ def _():
         return ex
     finally:
         pass
+
+
+##############################
+@post("/book_property")
+def book_property():
+    try:
+        # Retrieve the item_id from the form data
+        item_id = request.forms.get("item_id", '')
+
+        # Implement your booking logic here
+        # For example, you can update the database to mark the property as booked
+        
+        # Return a response indicating the success of the booking
+        return f"""
+        <template mix-target="[id='{item_id}']">
+            <!-- Update the HTML to indicate the property is booked -->
+            <div class="booked-status">Property booked!</div>
+        </template>
+        """
+    except Exception as ex:
+        ic(ex)
+        return ex
+    finally:
+        pass
     
 ##############################
 @get("/arango/items")
@@ -345,7 +371,7 @@ def _(key):
         pass
 
 ##############################
-@get("/rooms/<id>")
+@get("/item/<id>")
 def _(id):
     try:
         db = x.db()
@@ -353,7 +379,7 @@ def _(id):
         item = q.fetchone()
         title = "Item "+id
         ic(item)
-        return template("rooms",
+        return template("items.html",
                         id=id, 
                         title=title,
                         item=item)
