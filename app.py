@@ -520,7 +520,7 @@ def reset_password(key):
         return str(ex)
 
 ##############################
-@post("/reset-password/<key>")
+@put("/reset-password/<key>")
 def handle_reset_password(key):
     try:
         password = request.forms.get("password")
@@ -528,6 +528,8 @@ def handle_reset_password(key):
 
         if password != confirm_password:
             return "Passwords do not match"
+        
+        hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
         update_query = {
             "query": """
@@ -536,7 +538,7 @@ def handle_reset_password(key):
             """,
             "bindVars": {
                 "key": key,
-                "password": password
+                "password": hashed_password
             }
         }
         x.arango(update_query)
