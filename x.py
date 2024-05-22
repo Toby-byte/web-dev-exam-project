@@ -81,15 +81,21 @@ def setup_collection():
 
 ##############################
 def send_reset_email(email, key):
-    reset_link = f"http://yourdomain.com/reset_password/{key}"
+    from_email = 'joeybidenisbased@gmail.com'
+    from_password = 'tdvi euik qgsa bzdf'
+
+    domain = request.urlparts.scheme + "://" + request.urlparts.netloc
+    reset_link = f"{domain}/reset-password/{key}"
     msg = MIMEText(f"Click the link to reset your password: {reset_link}")
     msg["Subject"] = "Password Reset Request"
-    msg["From"] = "no-reply@yourdomain.com"
+    msg["From"] = from_email
     msg["To"] = email
 
-    with smtplib.SMTP("smtp.yourprovider.com") as server:
-        server.login("yourusername", "yourpassword")
-        server.sendmail(msg["From"], [msg["To"]], msg.as_string())
+    server = smtplib.SMTP('smtp.gmail.com:587')
+    server.ehlo('Gmail')
+    server.starttls()
+    server.login(from_email, from_password)
+    server.sendmail(msg["From"], [msg["To"]], msg.as_string())
 
 ##############################
 def no_cache():

@@ -501,21 +501,26 @@ def handle_forgot_password():
 @get("/reset-password/<key>")
 def reset_password(key):
     try:
-        user_query = {
+        query = {
             "query": "FOR user IN users FILTER user._key == @key RETURN user",
             "bindVars": {"key": key}
         }
-        user = x.arango(user_query)
-        if not user["result"]:
-            raise Exception("Invalid token")
-
-        return template("reset-password.html", key=key)
+        result = x.arango(query)
+        users = result.get("result", [])
+        if not users:
+            response.status = 404
+            return {"error": "User not found"}
+        
+        user = users[0]  # There should be only one item with the specified ID
+        ic(user)
+        
+        return template("reset-password.html", key=key, user=user)
     except Exception as ex:
         ic(ex)
         return str(ex)
 
 ##############################
-@put("/reset-password/<key>")
+@post("/reset-password/<key>")
 def handle_reset_password(key):
     try:
         password = request.forms.get("password")
@@ -524,16 +529,14 @@ def handle_reset_password(key):
         if password != confirm_password:
             return "Passwords do not match"
 
-        hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
-
         update_query = {
             "query": """
-                UPDATE { _key: @key, user_password: @password }
+                UPDATE { _key: @key, password: @password }
                 IN users
             """,
             "bindVars": {
                 "key": key,
-                "password": hashed_password
+                "password": password
             }
         }
         x.arango(update_query)
