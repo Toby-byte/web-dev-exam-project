@@ -181,7 +181,7 @@ def _():
         res = {"query": "INSERT @doc IN users RETURN NEW", "bindVars": {"doc": user}} # inserts a user via AQL query language, via the db method in the x.py file
         item = x.arango(res)
         
-        return template("login.html")
+        return template("login_wu_mixhtml.html")
     except Exception as ex:
         ic(ex)
         if "user_name" in str(ex):
