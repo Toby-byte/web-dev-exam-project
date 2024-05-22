@@ -6,7 +6,7 @@
 # import sys
 # sys.path.insert(0, str(pathlib.Path(__file__).parent.resolve())+"/bottle")
 from bottle import default_app, put, delete, get, post, request, response, run, static_file, template
-import x
+import x, re
 from icecream import ic
 import bcrypt
 import json
@@ -39,24 +39,29 @@ def _(item_splash_image):
 @get("/")
 def _():
     try:
-        db = x.db()
-        q = db.execute("SELECT * FROM items ORDER BY item_created_at LIMIT 0, ?", (x.ITEMS_PER_PAGE,))
-        items = q.fetchall()
+        x.setup_collection()
+        # Fetch items from the ArangoDB collection 'items'
+        query = {
+            "query": "FOR item IN items SORT item.item_created_at LIMIT @limit RETURN item",
+            "bindVars": {"limit": x.ITEMS_PER_PAGE}
+        }
+        result = x.arango(query)
+        items = result.get("result", [])
         ic(items)
         is_logged = False
-        try:    
+        try:
             x.validate_user_logged()
             is_logged = True
         except:
             pass
 
-        return template("index.html", items=items, mapbox_token=credentials.mapbox_token, 
-                        is_logged=is_logged)
+        return template("index.html", items=items, mapbox_token=credentials.mapbox_token, is_logged=is_logged)
     except Exception as ex:
         ic(ex)
-        return ex
+        return str(ex)
     finally:
-        if "db" in locals(): db.close()
+        pass
+
 
 @get("/signup")
 def _():
@@ -92,7 +97,7 @@ def _():
         # """
     except Exception as ex:
         ic(ex)
-        if "user_name" in str(ex):
+        if "username" in str(ex):
             return f"""
             <template mix-target="#message">
                 {ex.args[1]}
@@ -106,16 +111,23 @@ def _():
 @get("/items/page/<page_number>")
 def _(page_number):
     try:
-        db = x.db()
-        next_page = int(page_number) + 1
-        offset = (int(page_number) - 1) * x.ITEMS_PER_PAGE
-        q = db.execute(f"""     SELECT * FROM items 
-                                ORDER BY item_created_at 
-                                LIMIT ? OFFSET {offset}
-                        """, (x.ITEMS_PER_PAGE,))
-        items = q.fetchall()
+        page_number = int(page_number)
+        if page_number < 1:
+            raise ValueError("Page number must be greater than 0")
+        
+        offset = (page_number - 1) * x.ITEMS_PER_PAGE
+        query = {
+            "query": "FOR item IN items SORT item.item_created_at LIMIT @offset, @limit RETURN item",
+            "bindVars": {
+                "offset": offset,
+                "limit": x.ITEMS_PER_PAGE
+            }
+        }
+        result = x.arango(query)
+        items = result.get("result", [])
         ic(items)
 
+        html = ""
         is_logged = False
         try:
             x.validate_user_logged()
@@ -123,12 +135,14 @@ def _(page_number):
         except:
             pass
 
-        html = ""
-        for item in items: 
+        for item in items:
             html += template("_item", item=item, is_logged=is_logged)
+        
+        next_page = page_number + 1
         btn_more = template("__btn_more", page_number=next_page)
-        if len(items) < x.ITEMS_PER_PAGE: 
+        if len(items) < x.ITEMS_PER_PAGE:
             btn_more = ""
+
         return f"""
         <template mix-target="#items" mix-bottom>
             {html}
@@ -142,7 +156,7 @@ def _(page_number):
         ic(ex)
         return "ups..."
     finally:
-        if "db" in locals(): db.close()
+        pass
 
 
 ##############################
@@ -374,23 +388,114 @@ def _(key):
 @get("/item/<id>")
 def _(id):
     try:
-        db = x.db()
-        q = db.execute("SELECT * FROM items WHERE item_pk = ?", (id,))
-        item = q.fetchone()
-        title = "Item "+id
+        item_key_data = id
+        item_key_name = "_key"
+        query = {
+            "query": "FOR item IN items FILTER item[@key_name] == @key_data RETURN item",
+            "bindVars": {"key_name": item_key_name, "key_data": item_key_data}
+        }
+        result = x.arango(query)
+        items = result.get("result", [])
+        if not items:
+            response.status = 404
+            return {"error": "Item not found"}
+        
+        item = items[0]  # There should be only one item with the specified ID
+        title = f"Item {id}"
         ic(item)
         return template("items.html",
                         id=id, 
                         title=title,
                         item=item)
     except Exception as ex:
-        print(ex)
-        return "error"
+        ic(ex)
+        return {"error": str(ex)}
+
+##############################
+@get("/users")
+def _():
+    try:
+        q = {"query": "FOR user IN users RETURN user"}
+        users = x.arango(q)
+        ic(users)
+        return template("users", users=users["result"])
+    except Exception as ex:
+        ic(ex)
+        return {"error": str(ex)}
+
+##############################
+@get("/users/<key>")
+def get_user(key):
+    try:
+        q = {"query": "FOR user IN users FILTER user._key == @key RETURN user", "bindVars": {"key": key}}
+        users = x.arango(q)
+        if not users:
+            response.status = 404
+            return {"error": "User not found"}
+        user = users[0]  # ArangoDB returns a list of results
+        ic(user)
+        return template("index", users=users["result"])
+    except Exception as ex:
+        ic(ex)
+        return {"error": str(ex)}
+##############################
+@delete("/users/<key>")
+def _(key):
+    try:
+        # Regex validation for key
+        if not re.match(r"^[1-9]\d*$", key):
+            return "Invalid key format"
+
+        ic(key)
+        res = x.arango({"query":"""
+                    FOR user IN users
+                    FILTER user._key == @key
+                    REMOVE user IN users RETURN OLD""", 
+                    "bindVars":{"key":key}})
+        print(res)
+        return f"""
+        <template mix-target="[id='{key}']" mix-replace>
+            <div class="mix-fade-out user_deleted" mix-ttl="2000">User deleted</div>
+        </template>
+        """
+    except Exception as ex:
+        ic(ex)
+        return "An error occurred"
     finally:
         pass
 
-##############################
 
+##############################
+@put("/users/<key>")
+def _(key):
+    try:
+        username = x.validate_user_username()
+        email = x.validate_email()
+        res = x.arango({"query":"""
+                        UPDATE { _key: @key, username: @username, email: @email} 
+                        IN users 
+                        RETURN NEW""",
+                    "bindVars":{
+                        "key": f"{key}",
+                        "username":f"{username}",
+                        "email":f"{email}"
+                    }})
+        return f"""
+        <template mix-target="[id='{key}']" mix-before>
+            <div class="mix-fade-out user_deleted" mix-ttl="2000">User updated</div>            
+        </template>
+        """
+    except Exception as ex:
+        ic(ex)
+        if "username" in str(ex):
+            return f"""
+            <template mix-target="#message">
+                {ex.args[1]}
+            </template>
+            """ 
+    finally:
+        pass
+##############################
 try:
     import production
     application = default_app()

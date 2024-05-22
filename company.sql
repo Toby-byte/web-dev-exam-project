@@ -3,7 +3,7 @@
 DROP TABLE IF EXISTS users;
 
 CREATE TABLE users(
-    user_pk                 TEXT,
+    _key                    TEXT,
     user_username           TEXT,
     user_name               TEXT,
     user_last_name          TEXT,
@@ -35,7 +35,7 @@ INSERT INTO users VALUES(
 DROP TABLE IF EXISTS items;
 
 CREATE TABLE items(
-    item_pk                 TEXT,
+    _key                    TEXT,
     item_name               TEXT,
     item_splash_image       TEXT,
     item_lat                TEXT,
