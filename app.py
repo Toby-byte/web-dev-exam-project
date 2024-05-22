@@ -231,10 +231,13 @@ def _():
                 "bindVars": {"email": user_email}
                 }
         user = x.arango(res)
-        print("This is a responce!!!: " + str(user["result"][0]["user_email"]) + " " + str(user["result"][0]["user_password"]))
+        print(str(user["result"][0]["user_email"]))
+        print(str(user["result"][0]["user_password"]))
+        # print("This is a responce!!!: " + str(user["result"][0]["user_email"]) + " " + str(user["result"][0]["user_password"]))
 
+        # this is not finshed yet...
         for user in users:
-            if user_email == user["email"] and user_password == user["password"]:
+            if user_email == str(user["result"][0]["user_email"]) and user_password == str(user["result"][0]["user_password"]):
                 return "login success"
 
         return "login failed"
