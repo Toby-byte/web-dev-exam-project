@@ -217,9 +217,8 @@ def _():
     x.no_cache()
     return template("login_wu_mixhtml.html")
 
-# this works now
 @post("/login_arango")
-def _():
+def login():
     try:
         user_email = request.forms.get("user_email")
         print(user_email)
@@ -227,23 +226,21 @@ def _():
         print(user_password)
 
         res = {
-                "query": "FOR user IN users FILTER user.user_email == @email RETURN user",
-                "bindVars": {"email": user_email}
-                }
-        user = x.arango(res)
-        print(str(user["result"][0]["user_email"]))
-        print(str(user["result"][0]["user_password"]))
-        # print("This is a responce!!!: " + str(user["result"][0]["user_email"]) + " " + str(user["result"][0]["user_password"]))
+            "query": "FOR user IN users FILTER user.user_email == @email RETURN user",
+            "bindVars": {"email": user_email}
+        }
+        query_result = x.arango(res)
+        users = query_result.get("result", [])
 
-        # this is not finshed yet...
-        for user in users:
-            if user_email == str(user["result"][0]["user_email"]) and user_password == str(user["result"][0]["user_password"]):
-                return "login success"
+        if users:
+            for user in users:
+                if user_email == user.get("user_email") and user_password == user.get("user_password"):
+                    return "login success"
 
-        return "login failed"
+        return "login failed - incorrect email or password"
     except Exception as ex:
-        print(ex)
-        return ex
+        print("An error occurred:", ex)
+        return "An error occurred while processing your request"
     finally:
         pass
 
