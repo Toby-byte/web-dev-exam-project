@@ -5,6 +5,8 @@ import sqlite3
 from icecream import ic
 import requests
 import json
+import smtplib
+from email.mime.text import MIMEText
 
 ITEMS_PER_PAGE = 2
 COOKIE_SECRET = "41ebeca46f3b-4d77-a8e2-554659075C6319a2fbfb-9a2D-4fb6-Afcad32abb26a5e0"
@@ -76,6 +78,18 @@ def setup_collection():
         print(ex)
     finally:
         pass
+
+##############################
+def send_reset_email(email, key):
+    reset_link = f"http://yourdomain.com/reset_password/{key}"
+    msg = MIMEText(f"Click the link to reset your password: {reset_link}")
+    msg["Subject"] = "Password Reset Request"
+    msg["From"] = "no-reply@yourdomain.com"
+    msg["To"] = email
+
+    with smtplib.SMTP("smtp.yourprovider.com") as server:
+        server.login("yourusername", "yourpassword")
+        server.sendmail(msg["From"], [msg["To"]], msg.as_string())
 
 ##############################
 def no_cache():
