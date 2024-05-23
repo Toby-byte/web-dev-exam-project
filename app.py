@@ -5,12 +5,13 @@
 # import pathlib
 # import sys
 # sys.path.insert(0, str(pathlib.Path(__file__).parent.resolve())+"/bottle")
-from bottle import default_app, put, delete, get, post, request, response, run, static_file, template, redirect
+from bottle import default_app, put, delete, get, post, request, response, run, static_file, template, redirect, view
 import x
 from icecream import ic
 import bcrypt
 import json
 import credentials
+import uuid
 
 ##############################
 @get("/app.css")
@@ -37,7 +38,7 @@ def _(item_splash_image):
 
 ##############################
 @get("/")
-def _():
+def home():
     try:
         db = x.db()
         q = db.execute("SELECT * FROM items ORDER BY item_created_at LIMIT 0, ?", (x.ITEMS_PER_PAGE,))
@@ -210,12 +211,15 @@ def _():
 
 ##############################
 @get("/login")
-def _():
+@view("login_wu_mixhtml")
+def login():
     x.no_cache()
-    return template("login_wu_mixhtml.html")
+    return
+
+sessions = {}
 
 @post("/login_arango")
-def login():
+def login_post():
     try:
         user_email = request.forms.get("user_email")
         print(user_email)
@@ -235,14 +239,18 @@ def login():
 
                 # Verify the provided password with the stored hashed password
                 if bcrypt.checkpw(user_password.encode('utf-8'), stored_hashed_password.encode('utf-8')):
-                    return "login success"
+                    user_session_id = str(uuid.uuid4())
+                    sessions[user_session_id] = user
+                    print("#"*30)
+                    print(sessions)
+                    response.set_cookie("user_session_id", user_session_id)
+                    return home()
 
-        return "login failed - incorrect email or password"
+        return login()
+        # return "login failed - incorrect email or password"
     except Exception as ex:
         print("An error occurred:", ex)
         return "An error occurred while processing your request"
-    finally:
-        pass
 
 ##############################
 @post("/login")
