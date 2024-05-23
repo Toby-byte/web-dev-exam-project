@@ -3,6 +3,10 @@ node_modules
 package.json
 package-lock.json
 credentials.py
+<<<<<<< HEAD
 arangodb
 000153.log
 engine-rocksdb
+=======
+arangodb
+>>>>>>> 9dcb69f30c33a9266f7713c3a1130349761fd583

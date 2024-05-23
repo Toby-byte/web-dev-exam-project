@@ -206,19 +206,3 @@ def send_reset_email(email, key):
     server.sendmail(msg["From"], [msg["To"]], msg.as_string())
 
 ##############################
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
