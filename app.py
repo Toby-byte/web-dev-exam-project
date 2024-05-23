@@ -36,6 +36,15 @@ def _():
 def _(item_splash_image):
     return static_file(item_splash_image, "images")
 
+sessions = {}
+
+def validate_user_logged():
+    user_session_id = request.get_cookie("user_session_id")
+    if user_session_id in sessions:
+        return True
+    else:
+        return False
+    
 ##############################
 @get("/")
 def home():
@@ -44,20 +53,18 @@ def home():
         q = db.execute("SELECT * FROM items ORDER BY item_created_at LIMIT 0, ?", (x.ITEMS_PER_PAGE,))
         items = q.fetchall()
         ic(items)
-        is_logged = False
-        try:    
-            x.validate_user_logged()
-            is_logged = True
-        except:
-            pass
 
-        return template("index.html", items=items, mapbox_token=credentials.mapbox_token, 
-                        is_logged=is_logged)
+        # Use the validate_user_logged function to check login status
+        is_logged = validate_user_logged()
+        print(is_logged)
+
+        return template("index.html", items=items, mapbox_token=credentials.mapbox_token, is_logged=is_logged)
     except Exception as ex:
         ic(ex)
-        return ex
+        return str(ex)
     finally:
-        if "db" in locals(): db.close()
+        if "db" in locals():
+            db.close()
 
 
 ##############################
@@ -204,10 +211,11 @@ def _():
 ##############################
 @get("/logout")
 def _():
-    response.delete_cookie("user")
-    response.status = 303
-    response.set_header('Location', '/login')
-    return
+    user_session_id = request.get_cookie("user_session_id")
+    if user_session_id in sessions:
+        del sessions[user_session_id]
+    response.delete_cookie("user_session_id")
+    return home()
 
 ##############################
 @get("/login")
@@ -215,8 +223,6 @@ def _():
 def login():
     x.no_cache()
     return
-
-sessions = {}
 
 @post("/login_arango")
 def login_post():
@@ -434,20 +440,28 @@ def _(key):
 @get("/rooms/<id>")
 def _(id):
     try:
-        db = x.db()
-        q = db.execute("SELECT * FROM items WHERE item_pk = ?", (id,))
-        item = q.fetchone()
-        title = "Item "+id
+        item_key_data = id
+        item_key_name = "_key"
+        query = {
+            "query": "FOR item IN items FILTER item[@key_name] == @key_data RETURN item",
+            "bindVars": {"key_name": item_key_name, "key_data": item_key_data}
+        }
+        result = x.arango(query)
+        items = result.get("result", [])
+        if not items:
+            response.status = 404
+            return {"error": "Item not found"}
+        
+        item = items[0]  # There should be only one item with the specified ID
+        title = f"Item {id}"
         ic(item)
         return template("rooms",
                         id=id, 
                         title=title,
                         item=item)
     except Exception as ex:
-        print(ex)
-        return "error"
-    finally:
-        pass
+        ic(ex)
+        return {"error": str(ex)}
 
 ##############################
 
