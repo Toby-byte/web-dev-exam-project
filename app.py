@@ -594,9 +594,9 @@ def forgot_password():
 @post("/forgot-password")
 def handle_forgot_password():
     try:
-        email = request.forms.get("user_email")
+        email = request.forms.get("email")
         user_query = {
-            "query": "FOR user IN users FILTER user.email == @user_email RETURN user",
+            "query": "FOR user IN users FILTER user.user_email == @user_email RETURN user",
             "bindVars": {"user_email": email}
         }
         user = x.arango(user_query)
@@ -721,84 +721,6 @@ def _(key):
         return "An error occurred"
     finally:
         pass
-##############################
-
-@get("/forgot-password")
-def forgot_password():
-    return template("forgot-password.html")
-
-##############################
-@post("/forgot-password")
-def handle_forgot_password():
-    try:
-        email = request.forms.get("email")
-        user_query = {
-            "query": "FOR user IN users FILTER user.email == @user_email RETURN user",
-            "bindVars": {"user_email": email}
-        }
-        user = x.arango(user_query)
-        if not user["result"]:
-            raise Exception("Email not found")
-
-        user = user["result"][0]
-        x.send_reset_email(email, user["_key"])
-
-        return "Password reset email sent"
-    except Exception as ex:
-        ic(ex)
-        return str(ex)
-    
-##############################
-@get("/reset-password/<key>")
-def reset_password(key):
-    try:
-        query = {
-            "query": "FOR user IN users FILTER user._key == @key RETURN user",
-            "bindVars": {"key": key}
-        }
-        result = x.arango(query)
-        users = result.get("result", [])
-        if not users:
-            response.status = 404
-            return {"error": "User not found"}
-        
-        user = users[0]  # There should be only one item with the specified ID
-        ic(user)
-        
-        return template("reset-password.html", key=key, user=user)
-    except Exception as ex:
-        ic(ex)
-        return str(ex)
-
-##############################
-@put("/reset-password/<key>")
-def handle_reset_password(key):
-    try:
-        password = request.forms.get("password")
-        confirm_password = request.forms.get("confirm_password")
-
-        if password != confirm_password:
-            return "Passwords do not match"
-        
-        hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
-
-        update_query = {
-            "query": """
-                UPDATE { _key: @key, password: @password }
-                IN users
-            """,
-            "bindVars": {
-                "key": key,
-                "password": hashed_password
-            }
-        }
-        x.arango(update_query)
-
-        return "Password reset successfully"
-    except Exception as ex:
-        ic(ex)
-        return str(ex)
-
 ##############################
 try:
     import production
