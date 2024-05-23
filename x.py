@@ -4,6 +4,9 @@ import re
 import sqlite3
 from icecream import ic
 import requests
+import json
+import smtplib
+from email.mime.text import MIMEText
 
 ITEMS_PER_PAGE = 2
 COOKIE_SECRET = "41ebeca46f3b-4d77-a8e2-554659075C6319a2fbfb-9a2D-4fb6-Afcad32abb26a5e0"
@@ -20,50 +23,6 @@ def db():
     db = sqlite3.connect(str(pathlib.Path(__file__).parent.resolve())+"/company.db")  
     db.row_factory = dict_factory
     return db
-
-
-
-
-def setup_collection():
-    try:
-        # Check if the 'items' collection exists using the HTTP API
-        url = "http://arangodb:8529/_api/collection/items"
-        res = requests.get(url)
-        ic(res)
-        ic(res.text)
-
-        if res.status_code == 200:
-            ic("Collection 'items' already exists.")
-            return
-
-        # Create the 'items' collection
-        url = "http://arangodb:8529/_api/collection"
-        collection_data = {"name": "items"}
-        res = requests.post(url, json=collection_data)
-        ic(res)
-        ic(res.text)
-
-        if res.status_code == 200:
-            # Insert items.json data into the 'items' collection
-            with open("items.json", "r") as f:
-                items = json.load(f)
-
-            for item in items:
-                query = {
-                    "query": "INSERT @item INTO items",
-                    "bindVars": {"item": item}
-                }
-                arango(query)
-
-            ic("Collection 'items' created and populated with data.")
-        else:
-            ic("Failed to create the 'items' collection.")
-    except Exception as ex:
-        print("#" * 50)
-        print(ex)
-    finally:
-        pass
-
 
 
 ##############################
@@ -188,8 +147,65 @@ def confirm_password():
   return user_confirm_password
 
 ##############################
+def setup_collection():
+    try:
+        # Check if the 'items' collection exists using the HTTP API
+        url = "http://arangodb:8529/_api/collection/items"
+        res = requests.get(url)
+        ic(res)
+        ic(res.text)
 
+        if res.status_code == 200:
+            ic("Collection 'items' already exists.")
+            return
 
+        # Create the 'items' collection
+        url = "http://arangodb:8529/_api/collection"
+        collection_data = {"name": "items"}
+        res = requests.post(url, json=collection_data)
+        ic(res)
+        ic(res.text)
+
+        if res.status_code == 200:
+            # Insert items.json data into the 'items' collection
+            with open("items.json", "r") as f:
+                items = json.load(f)
+
+            for item in items:
+                query = {
+                    "query": "INSERT @item INTO items",
+                    "bindVars": {"item": item}
+                }
+                arango(query)
+
+            ic("Collection 'items' created and populated with data.")
+        else:
+            ic("Failed to create the 'items' collection.")
+    except Exception as ex:
+        print("#" * 50)
+        print(ex)
+    finally:
+        pass
+
+##############################
+def send_reset_email(email, key):
+    from_email = 'joeybidenisbased@gmail.com'
+    from_password = 'tdvi euik qgsa bzdf'
+
+    domain = request.urlparts.scheme + "://" + request.urlparts.netloc
+    reset_link = f"{domain}/reset-password/{key}"
+    msg = MIMEText(f"Click the link to reset your password: {reset_link}")
+    msg["Subject"] = "Password Reset Request"
+    msg["From"] = from_email
+    msg["To"] = email
+
+    server = smtplib.SMTP('smtp.gmail.com:587')
+    server.ehlo('Gmail')
+    server.starttls()
+    server.login(from_email, from_password)
+    server.sendmail(msg["From"], [msg["To"]], msg.as_string())
+
+##############################
 
 
 
