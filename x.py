@@ -22,6 +22,50 @@ def db():
     return db
 
 
+
+
+def setup_collection():
+    try:
+        # Check if the 'items' collection exists using the HTTP API
+        url = "http://arangodb:8529/_api/collection/items"
+        res = requests.get(url)
+        ic(res)
+        ic(res.text)
+
+        if res.status_code == 200:
+            ic("Collection 'items' already exists.")
+            return
+
+        # Create the 'items' collection
+        url = "http://arangodb:8529/_api/collection"
+        collection_data = {"name": "items"}
+        res = requests.post(url, json=collection_data)
+        ic(res)
+        ic(res.text)
+
+        if res.status_code == 200:
+            # Insert items.json data into the 'items' collection
+            with open("items.json", "r") as f:
+                items = json.load(f)
+
+            for item in items:
+                query = {
+                    "query": "INSERT @item INTO items",
+                    "bindVars": {"item": item}
+                }
+                arango(query)
+
+            ic("Collection 'items' created and populated with data.")
+        else:
+            ic("Failed to create the 'items' collection.")
+    except Exception as ex:
+        print("#" * 50)
+        print(ex)
+    finally:
+        pass
+
+
+
 ##############################
 def arango(query, type = "cursor"):
     try:
