@@ -5,6 +5,9 @@
         % for user in users:
             % include("_user.html")
         % end
+        % for user in active_users:
+            % include("_blocked-user.html")
+        % end
     </div>
     <p id="message"></p>
 </main>

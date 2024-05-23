@@ -61,7 +61,7 @@ def home():
         ic(ex)
         return str(ex)
     finally:
-        if "db" in locals(): db.close()
+        pass
 
 @get("/signup")
 def _():
