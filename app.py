@@ -61,6 +61,8 @@ def _():
         return str(ex)
     finally:
         pass
+
+
 @get("/signup")
 def _():
     try:
@@ -425,20 +427,28 @@ def _(key):
 @get("/rooms/<id>")
 def _(id):
     try:
-        db = x.db()
-        q = db.execute("SELECT * FROM items WHERE item_pk = ?", (id,))
-        item = q.fetchone()
-        title = "Item "+id
+        item_key_data = id
+        item_key_name = "_key"
+        query = {
+            "query": "FOR item IN items FILTER item[@key_name] == @key_data RETURN item",
+            "bindVars": {"key_name": item_key_name, "key_data": item_key_data}
+        }
+        result = x.arango(query)
+        items = result.get("result", [])
+        if not items:
+            response.status = 404
+            return {"error": "Item not found"}
+        
+        item = items[0]  # There should be only one item with the specified ID
+        title = f"Item {id}"
         ic(item)
         return template("rooms",
                         id=id, 
                         title=title,
                         item=item)
     except Exception as ex:
-        print(ex)
-        return "error"
-    finally:
-        pass
+        ic(ex)
+        return {"error": str(ex)}
 
 ##############################
 @get("/users")
@@ -472,7 +482,7 @@ def get_user(key):
 def _(key):
     try:
         # Regex validation for key
-        if not re.match(r"^[1-9]\d*$", key):
+        if not re.match(r'^[1-9]\d*$', key):
             return "Invalid key format"
 
         ic(key)
@@ -606,7 +616,6 @@ def handle_reset_password(key):
         return str(ex)
 
 ##############################
-
 try:
     import production
     application = default_app()
