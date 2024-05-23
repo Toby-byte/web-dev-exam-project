@@ -480,34 +480,6 @@ def _():
     except Exception as ex:
         ic(ex)
         return {"error": str(ex)}
-##############################
-@delete("/users/<key>")
-def _(key):
-    try:
-        # Regex validation for key
-        if not re.match(r'^[1-9]\d*$', key):
-            return "Invalid key format"
-
-        ic(key)
-        res = x.arango({
-            "query": """
-                FOR user IN users
-                FILTER user._key == @key
-                UPDATE user WITH { blocked: true } IN users RETURN NEW
-            """, 
-            "bindVars": {"key": key}
-        })
-        ic(res)
-        return f"""
-        <template mix-target="[id='{key}']" mix-replace>
-            <div class="mix-fade-out user_deleted" mix-ttl="2000">User blocked</div>
-        </template>
-        """
-    except Exception as ex:
-        ic(ex)
-        return "An error occurred"
-    finally:
-        pass
 
 ##############################
 @get("/users/<key>")
@@ -662,37 +634,6 @@ def handle_reset_password(key):
         ic(ex)
         return str(ex)
 
-##############################
-@put("/users/<key>")
-def _(key):
-    try:
-        username = x.validate_user_username()
-        email = x.validate_email()
-        res = x.arango({"query":"""
-                        UPDATE { _key: @key, username: @username, user_email: @email} 
-                        IN users 
-                        RETURN NEW""",
-                    "bindVars":{
-                        "key": f"{key}",
-                        "username":f"{username}",
-                        "user_email":f"{email}"
-                    }})
-        print(res)
-        return f"""
-        <template mix-target="[id='{key}']" mix-before>
-            <div class="mix-fade-out user_deleted" mix-ttl="2000">User updated</div>            
-        </template>
-        """
-    except Exception as ex:
-        ic(ex)
-        if "username" in str(ex):
-            return f"""
-            <template mix-target="#message">
-                {ex.args[1]}
-            </template>
-            """ 
-    finally:
-        pass
 ##############################
 @put("/users/unblock/<key>")
 def _(key):
