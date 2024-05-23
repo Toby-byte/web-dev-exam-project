@@ -98,6 +98,39 @@ def send_reset_email(email, key):
     server.sendmail(msg["From"], [msg["To"]], msg.as_string())
 
 ##############################
+def send_block_email(email):
+    from_email = 'joeybidenisbased@gmail.com'
+    from_password = 'tdvi euik qgsa bzdf'
+
+    msg = MIMEText(f"You are deleted bro")
+    msg["Subject"] = "Password Reset Request"
+    msg["From"] = from_email
+    msg["To"] = email
+
+    server = smtplib.SMTP('smtp.gmail.com:587')
+    server.ehlo('Gmail')
+    server.starttls()
+    server.login(from_email, from_password)
+    server.sendmail(msg["From"], [msg["To"]], msg.as_string())
+
+
+##############################
+def send_unblock_email(email):
+    from_email = 'joeybidenisbased@gmail.com'
+    from_password = 'tdvi euik qgsa bzdf'
+
+    msg = MIMEText(f"You are no longer deleted bro")
+    msg["Subject"] = "Password Reset Request"
+    msg["From"] = from_email
+    msg["To"] = email
+
+    server = smtplib.SMTP('smtp.gmail.com:587')
+    server.ehlo('Gmail')
+    server.starttls()
+    server.login(from_email, from_password)
+    server.sendmail(msg["From"], [msg["To"]], msg.as_string())
+
+##############################
 def no_cache():
     response.add_header("Cache-Control", "no-cache, no-store, must-revalidate")
     response.add_header("Pragma", "no-cache")

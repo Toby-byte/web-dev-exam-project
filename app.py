@@ -389,10 +389,16 @@ def _(id):
 @get("/users")
 def _():
     try:
-        q = {"query": "FOR user IN users FILTER user.blocked != true RETURN user"}
-        users = x.arango(q)
-        ic(users)
-        return template("users", users=users["result"])
+        active_query = {"query": "FOR user IN users FILTER user.blocked != true RETURN user"}
+        blocked_query = {"query": "FOR user IN users FILTER user.blocked == true RETURN user"}
+        
+        active_users = x.arango(active_query)
+        blocked_users = x.arango(blocked_query)
+        
+        ic(active_users)
+        ic(blocked_users)
+        
+        return template("users", active_users=active_users["result"], blocked_users=blocked_users["result"])
     except Exception as ex:
         ic(ex)
         return {"error": str(ex)}
@@ -470,6 +476,34 @@ def _(key):
                 {ex.args[1]}
             </template>
             """ 
+    finally:
+        pass
+##############################
+@put("/users/unblock/<key>")
+def _(key):
+    try:
+        # Regex validation for key
+        if not re.match(r"^[1-9]\d*$", key):
+            return "Invalid key format"
+
+        ic(key)
+        res = x.arango({
+            "query": """
+                FOR user IN users
+                FILTER user._key == @key
+                UPDATE user WITH { blocked: false } IN users RETURN NEW
+            """,
+            "bindVars": {"key": key}
+        })
+        ic(res)
+        return f"""
+        <template mix-target="[id='{key}']" mix-replace>
+            <div class="mix-fade-out user_unblocked" mix-ttl="2000">User unblocked</div>
+        </template>
+        """
+    except Exception as ex:
+        ic(ex)
+        return "An error occurred"
     finally:
         pass
 ##############################
