@@ -461,7 +461,13 @@ def _(id):
 @get("/users")
 def _():
     try:
-        active_query = {"query": "FOR user IN users FILTER user.blocked != true RETURN user"}
+        active_query = {"query": """
+                                    FOR user IN users 
+                                    LET isBlocked = HAS(user, 'blocked') ? user.blocked : false
+                                    FILTER isBlocked != true 
+                                    UPDATE user WITH { blocked: isBlocked } IN users 
+                                    RETURN NEW
+                            """}
         blocked_query = {"query": "FOR user IN users FILTER user.blocked == true RETURN user"}
         
         active_users = x.arango(active_query)
@@ -471,22 +477,6 @@ def _():
         ic(blocked_users)
         
         return template("users", active_users=active_users["result"], blocked_users=blocked_users["result"])
-    except Exception as ex:
-        ic(ex)
-        return {"error": str(ex)}
-
-##############################
-@get("/users/<key>")
-def get_user(key):
-    try:
-        q = {"query": "FOR user IN users FILTER user._key == @key RETURN user", "bindVars": {"key": key}}
-        users = x.arango(q)
-        if not users:
-            response.status = 404
-            return {"error": "User not found"}
-        user = users[0]  # ArangoDB returns a list of results
-        ic(user)
-        return template("index", users=users["result"])
     except Exception as ex:
         ic(ex)
         return {"error": str(ex)}
@@ -518,18 +508,6 @@ def _(key):
         return "An error occurred"
     finally:
         pass
-
-##############################
-@get("/users")
-def _():
-    try:
-        q = {"query": "FOR user IN users FILTER user.blocked != true RETURN user"}
-        users = x.arango(q)
-        ic(users)
-        return template("users", users=users["result"])
-    except Exception as ex:
-        ic(ex)
-        return {"error": str(ex)}
 
 ##############################
 @get("/users/<key>")
@@ -580,15 +558,15 @@ def _(key):
 def _(key):
     try:
         username = x.validate_user_username()
-        email = x.validate_email()
+        user_email = x.validate_email()
         res = x.arango({"query":"""
-                        UPDATE { _key: @key, username: @username, email: @email} 
+                        UPDATE { _key: @key, username: @username, user_email: @email} 
                         IN users 
                         RETURN NEW""",
                     "bindVars":{
-                        "key": f"{key}",
+                        "_key": f"{key}",
                         "username":f"{username}",
-                        "email":f"{email}"
+                        "user_email":f"{user_email}"
                     }})
         print(res)
         return f"""
@@ -616,7 +594,7 @@ def forgot_password():
 @post("/forgot-password")
 def handle_forgot_password():
     try:
-        email = request.forms.get("email")
+        email = request.forms.get("user_email")
         user_query = {
             "query": "FOR user IN users FILTER user.email == @user_email RETURN user",
             "bindVars": {"user_email": email}
@@ -691,13 +669,13 @@ def _(key):
         username = x.validate_user_username()
         email = x.validate_email()
         res = x.arango({"query":"""
-                        UPDATE { _key: @key, username: @username, email: @email} 
+                        UPDATE { _key: @key, username: @username, user_email: @email} 
                         IN users 
                         RETURN NEW""",
                     "bindVars":{
                         "key": f"{key}",
                         "username":f"{username}",
-                        "email":f"{email}"
+                        "user_email":f"{email}"
                     }})
         print(res)
         return f"""
