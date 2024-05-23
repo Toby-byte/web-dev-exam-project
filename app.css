@@ -724,6 +724,35 @@ video {
   width: 100%;
 }
 
+<<<<<<<<< Temporary merge branch 1
+.w-\[calc\(80\%-0\.5rem\)\] {
+  width: calc(80% - 0.5rem);
+}
+
+.w-\[calc\(60\%-0\.5rem\)\] {
+  width: calc(60% - 0.5rem);
+}
+
+.w-5\/6 {
+  width: 83.333333%;
+}
+
+.w-4\/6 {
+  width: 66.666667%;
+}
+
+.w-3\/5 {
+  width: 60%;
+}
+
+.w-2\/5 {
+  width: 40%;
+}
+
+.w-6 {
+  width: 1.5rem;
+}
+
 .max-w-screen-md {
   max-width: 768px;
 }
@@ -732,8 +761,12 @@ video {
   max-width: 640px;
 }
 
-.max-w-64 {
-  max-width: 16rem;
+.max-w-screen-xl {
+  max-width: 1280px;
+=========
+.w-1\/2 {
+  width: 50%;
+>>>>>>>>> Temporary merge branch 2
 }
 
 .grid-cols-1 {
