@@ -21,6 +21,7 @@
                 <label for="password">Confirm Password:</label>
                 <input type="text" name="password" required pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}" title="Password must contain at least one number, one uppercase and lowercase letter, and at least 8 or more characters">
             </div>
+            <input type="hidden" name="verification_code" id="verification_code">
             <div>
                 <!-- submit might break it, we will see... -->
                 <button type="submit" mix-post="/users" mix-data="#frm_user" mix-default="Create user" mix-await="Please wait...">Signup</button>
