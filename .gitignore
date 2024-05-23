@@ -5,3 +5,4 @@ package-lock.json
 credentials.py
 arangodb
 000153.log
+engine-rocksdb

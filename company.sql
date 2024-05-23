@@ -86,14 +86,15 @@ LIMIT 3 OFFSET 9;
 
 
 
+ALTER TABLE items ADD COLUMN item_status TEXT DEFAULT 'unblocked';
 
 
 
+ALTER TABLE items ADD COLUMN is_blocked BOOLEAN DEFAULT FALSE;
 
 
 
+ALTER TABLE items ADD COLUMN item_id TEXT;
 
-
-
-
-
+ALTER TABLE items ADD COLUMN item_state TEXT;
+ALTER TABLE items ADD COLUMN item_status TEXT DEFAULT 'unblocked';

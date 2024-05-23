@@ -263,6 +263,7 @@ def _():
 
 @post("/toggle_item_state")
 def toggle_item_state():
+    db = None
     try:
         item_id = request.forms.get("item_id", '')
         current_button_text = request.forms.get("button_text", '')  # Get the current text of the button
@@ -270,21 +271,25 @@ def toggle_item_state():
         # Determine the new button text based on the current text
         if current_button_text == "Unblock":
             new_button_text = "Block"
+            item_status = "Property is unblocked"
         else:
             new_button_text = "Unblock"
+            item_status = "Property is blocked"
         
         # Return HTML content to update the button
         return f"""
         <template mix-target="[id='{item_id}']" mix-replace>
             <form id="{item_id}">
                 <input name="item_id" type="text" value="{item_id}">
-                <input type="hidden" name="button_text" value="{new_button_text}"> <!-- Update hidden input value -->
+                <input type="hidden" name="button_text" value="{new_button_text}"> 
+                <p>{item_status}</p> 
                 <button
                     mix-data="[id='{item_id}']"
                     mix-post="/toggle_item_state"
                 >
                     {new_button_text}
                 </button>
+                
             </form>
         </template>
         """
@@ -292,11 +297,8 @@ def toggle_item_state():
         ic(ex)
         return str(ex)
     finally:
-        if "db" in locals(): db.close()
-
-
-
-
+        if db is not None:
+            db.close()
 
 
 
