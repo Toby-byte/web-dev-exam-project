@@ -168,7 +168,7 @@ EMAIL_REGEX = "^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@(
 
 def validate_email():
     error = f"email invalid"
-    email = request.forms.get("email", "").strip()
+    email = request.forms.get("user_email", "").strip()
     if not re.match(EMAIL_REGEX, email): raise Exception(error, 400)
     return email
 
