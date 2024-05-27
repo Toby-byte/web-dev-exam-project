@@ -7,9 +7,9 @@ import requests
 import json
 import smtplib
 from email.mime.text import MIMEText
-import json
-import smtplib
-from email.mime.text import MIMEText
+import random
+import string
+
 
 ITEMS_PER_PAGE = 2
 COOKIE_SECRET = "41ebeca46f3b-4d77-a8e2-554659075C6319a2fbfb-9a2D-4fb6-Afcad32abb26a5e0"
@@ -377,3 +377,11 @@ def send_unblock_email(email):
     server.starttls()
     server.login(from_email, from_password)
     server.sendmail(msg["From"], [msg["To"]], msg.as_string())
+
+##############################
+def generate_random_string(length=32):
+    """Generate a random string of fixed length."""
+    letters = string.ascii_lowercase + string.digits
+    return ''.join(random.choice(letters) for i in range(length))
+
+##############################

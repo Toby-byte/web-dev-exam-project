@@ -6,7 +6,7 @@
 # import sys
 # sys.path.insert(0, str(pathlib.Path(__file__).parent.resolve())+"/bottle")
 from bottle import default_app, put, delete, get, post, request, response, run, static_file, template
-import x, re
+import x, re, os, time
 from icecream import ic
 import bcrypt
 import json
@@ -39,8 +39,14 @@ def _():
 
 ##############################
 @get("/images/<item_splash_image>")
-def _(item_splash_image):
-    return static_file(item_splash_image, "images")
+def serve_image(item_splash_image):
+    # Check if the requested image exists in the current directory
+    if os.path.exists(os.path.join("images", item_splash_image)):
+        # Serve the requested image from the current directory
+        return static_file(item_splash_image, "images")
+    else:
+        # Serve the image from the uploads directory if it's not found in the current directory
+        return static_file(item_splash_image, root="uploads/images")
 
 sessions = {}
 
@@ -715,6 +721,87 @@ def _(key):
     except Exception as ex:
         ic(ex)
         return "An error occurred"
+    finally:
+        pass
+##############################
+UPLOAD_DIR = "uploads/images"
+##############################
+@get("/add_item")
+def add_item_form():
+    try:
+        return template("add_item.html")
+    except Exception as ex:
+        print("There was a problem loading the page:", ex)
+        return str(ex)
+##############################
+@post("/add_item")
+def add_item():
+    try:
+        # Get form data
+        item_name = request.forms.get("item_name")
+        
+        # Generate random values for latitude, longitude, and stars
+        item_lat = round(random.uniform(55.65, 55.7), 4)
+        item_lon = round(random.uniform(12.55, 12.6), 4)
+        item_stars = round(random.uniform(3.0, 5.0), 1)
+        
+        item_price_per_night = request.forms.get("item_price_per_night")
+
+        # Process splash image
+        item_splash_image = request.files.get("item_splash_image")
+
+        if not os.path.exists(UPLOAD_DIR):
+            os.makedirs(UPLOAD_DIR)
+
+        # Generate random filename for splash image
+        splash_image_filename = f"{x.generate_random_string()}_{item_splash_image.filename}"
+        splash_image_path = os.path.join(UPLOAD_DIR, splash_image_filename)
+        item_splash_image.save(splash_image_path)
+
+        # Process additional images
+        image2 = request.files.get("image2")
+        image3 = request.files.get("image3")
+        
+        images = [item_splash_image, image2, image3]
+        image_paths = []
+
+        for image in images:
+            if image and image.filename:
+                # Generate random filename for each image
+                image_filename = f"{x.generate_random_string()}_{image.filename}"
+                save_path = os.path.join(UPLOAD_DIR, image_filename)
+                image.save(save_path)
+                image_paths.append(save_path)
+
+        # Create item data
+        item = {
+            "item_name": item_name,
+            "item_splash_image": splash_image_filename,
+            "item_lat": item_lat,
+            "item_lon": item_lon,
+            "item_stars": item_stars,
+            "item_price_per_night": int(item_price_per_night),
+            "item_created_at": int(time.time()),
+            "item_updated_at": 0,
+            "item_images": [os.path.basename(path) for path in image_paths]
+        }
+
+        # Save item to the database
+        query = {
+            "query": "INSERT @item INTO items RETURN NEW",
+            "bindVars": {"item": item}
+        }
+        result = x.arango(query)
+
+        return f"""
+            <template mix-target="#message">
+                {ex.args[1]}
+            </template>
+            """         
+    except Exception as ex:
+        print("An error occurred:", ex)
+        return f"An error occurred: {str(ex)}"
+
     finally:
         pass
 ##############################
