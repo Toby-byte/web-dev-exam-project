@@ -26,6 +26,7 @@ def db():
     db.row_factory = dict_factory
     return db
 
+
 ##############################
 def arango(query, type = "cursor"):
     try:
@@ -40,87 +41,8 @@ def arango(query, type = "cursor"):
     finally:
         pass
 
-##############################
-def setup_collection():
-    try:
-        # Check if the 'items' collection exists using the HTTP API
-        url = "http://arangodb:8529/_api/collection/items"
-        res = requests.get(url)
-        ic(res)
-        ic(res.text)
 
-        if res.status_code == 200:
-            ic("Collection 'items' already exists.")
-            return
 
-        # Create the 'items' collection
-        url = "http://arangodb:8529/_api/collection"
-        collection_data = {"name": "items"}
-        res = requests.post(url, json=collection_data)
-        ic(res)
-        ic(res.text)
-
-        if res.status_code == 200:
-            # Insert items.json data into the 'items' collection
-            with open("items.json", "r") as f:
-                items = json.load(f)
-
-            for item in items:
-                query = {
-                    "query": "INSERT @item INTO items",
-                    "bindVars": {"item": item}
-                }
-                arango(query)
-
-            ic("Collection 'items' created and populated with data.")
-        else:
-            ic("Failed to create the 'items' collection.")
-    except Exception as ex:
-        print("#" * 50)
-        print(ex)
-    finally:
-        pass
-
-##############################
-def setup_users():
-    try:
-        # Check if the 'items' collection exists using the HTTP API
-        url = "http://arangodb:8529/_api/collection/users"
-        res = requests.get(url)
-        ic(res)
-        ic(res.text)
-
-        if res.status_code == 200:
-            ic("Collection 'items' already exists.")
-            return
-
-        # Create the 'items' collection
-        url = "http://arangodb:8529/_api/collection"
-        collection_data = {"name": "users"}
-        res = requests.post(url, json=collection_data)
-        ic(res)
-        ic(res.text)
-
-        if res.status_code == 200:
-            # Insert items.json data into the 'items' collection
-            with open("users.json", "r") as f:
-                users = json.load(f)
-
-            for user in users:
-                query = {
-                    "query": "INSERT @user INTO users",
-                    "bindVars": {"user": user}
-                }
-                arango(query)
-
-            ic("Collection 'users' created and populated with data.")
-        else:
-            ic("Failed to create the 'items' collection.")
-    except Exception as ex:
-        print("#" * 50)
-        print(ex)
-    finally:
-        pass
 
 ##############################
 def no_cache():
@@ -167,9 +89,9 @@ EMAIL_REGEX = "^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@(
 
 def validate_email():
     error = f"email invalid"
-    email = request.forms.get("user_email", "").strip()
-    if not re.match(EMAIL_REGEX, email): raise Exception(error, 400)
-    return email
+    user_email = request.forms.get("user_email", "").strip()
+    if not re.match(EMAIL_REGEX, user_email): raise Exception(error, 400)
+    return user_email
 
 ##############################
 
@@ -179,9 +101,9 @@ USER_USERNAME_REGEX = "^[a-z]{2,20}$"
 
 def validate_user_username():
     error = f"username {USER_USERNAME_MIN} to {USER_USERNAME_MAX} lowercase english letters"
-    username = request.forms.get("username", "").strip()
-    if not re.match(USER_USERNAME_REGEX, username): raise Exception(error, 400)
-    return username
+    user_username = request.forms.get("user_username", "").strip()
+    if not re.match(USER_USERNAME_REGEX, user_username): raise Exception(error, 400)
+    return user_username
 
 ##############################
 
