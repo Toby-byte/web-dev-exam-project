@@ -731,6 +731,125 @@ def add_item():
     finally:
         pass
 ##############################
+@get('/edit_item/<key>')
+def _(key):
+    try:
+        item_key_data = key
+        item_key_name = "_key"
+        query = {
+            "query": "FOR item IN items FILTER item[@key_name] == @key_data RETURN item",
+            "bindVars": {"key_name": item_key_name, "key_data": item_key_data}
+        }
+        result = x.arango(query)
+        items = result.get("result", [])
+        if not items:
+            response.status = 404
+            return {"error": "Item not found"}
+        
+        item = items[0]  # There should be only one item with the specified ID
+        title = f"Edit your property"
+        ic(item)
+        is_logged = validate_user_logged()
+        print(is_logged)
+        return template("edit_item",
+                        key=key, 
+                        title=title,
+                        item=item, is_logged=is_logged)
+    except Exception as ex:
+        ic(ex)
+        return {"error": str(ex)}
+
+##############################
+@post('/edit_item/<key>')
+def update_item(key):
+    try:
+        item_name = request.forms.get('item_name')
+        item_price_per_night = request.forms.get('item_price_per_night')
+        
+        item_splash_image = request.files.get('item_splash_image')
+        image2 = request.files.get('image2')
+        image3 = request.files.get('image3')
+
+        # Save the new images
+        splash_image_filename = f"{x.generate_random_string()}_{item_splash_image.filename}"
+        image2_filename = f"{x.generate_random_string()}_{image2.filename}"
+        image3_filename = f"{x.generate_random_string()}_{image3.filename}"
+
+        images = [item_splash_image, image2, image3]
+        image_paths = []
+
+        for image in images:
+            if image and image.filename:
+                # Generate random filename for each image
+                image_filename = f"{x.generate_random_string()}_{image.filename}"
+                save_path = os.path.join(UPLOAD_DIR, image_filename)
+                image.save(save_path)
+                image_paths.append(save_path)
+
+        # Fetch the existing item to delete old images if necessary
+        query = {
+            "query": "FOR item IN items FILTER item._key == @key RETURN item",
+            "bindVars": {"key": key}
+        }
+        result = x.arango(query)
+        items = result.get("result", [])
+        if not items:
+            response.status = 404
+            return {"error": "Item not found"}
+        
+        item = items[0]  # There should be only one item with the specified ID
+
+                # Delete old images if new ones are uploaded
+        if splash_image_filename and 'item_splash_image' in item:
+            old_image_path = os.path.join("uploads/images/", item['item_splash_image'])
+            if os.path.exists(old_image_path):
+                os.remove(old_image_path)
+
+        
+        if image2_filename and 'image2' in item:
+            old_image_path = os.path.join("uploads/images/", item['image2'])
+            if os.path.exists(old_image_path):
+                os.remove(old_image_path)
+        
+        if image3_filename and 'image3' in item:
+            old_image_path = os.path.join("uploads/images/", item['image3'])
+            if os.path.exists(old_image_path):
+                os.remove(old_image_path)
+
+        # Update the item in the database
+        update_query = {
+            "query": """
+            UPDATE { 
+                _key: @key, 
+                item_name: @item_name, 
+                item_price_per_night: @item_price_per_night,
+                item_splash_image: @item_splash_image,
+                item_lat: @item_lat,
+                item_lon: @item_lon,
+                item_stars: @item_stars,
+                "item_images": [os.path.basename(path) for path in image_paths],
+                item_updated_at: @item_updated_at
+            } IN items
+            """,
+            "bindVars": {
+                "key": key,
+                "item_name": item_name,
+                "item_price_per_night": int(item_price_per_night),
+                "item_splash_image": splash_image_filename,
+                "item_lat": random.uniform(55.6, 55.7),
+                "item_lon": random.uniform(12.5, 12.6),
+                "item_stars": round(random.uniform(3.0, 5.0), 1),
+                "item_images": [os.path.basename(path) for path in image_paths],
+                "item_updated_at": int(time.time()),
+            }
+        }
+
+        x.arango(update_query)
+        
+        return "Item updated successfully"
+    except Exception as ex:
+        return {"error": str(ex)}
+##############################
 try:
     import production
     application = default_app()
