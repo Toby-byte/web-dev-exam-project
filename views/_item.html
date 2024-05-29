@@ -26,17 +26,5 @@
         <span>
             nat
         </span>
-        
-<form id="{{ item['_key'] }}">
-    <input name="item_id" type="hidden" value="{{ item['_key'] }}">
-    <input type="hidden" name="button_text" value="{% if item['blocked'] %}Unblock{% else %}Block{% endif %}">
-    <button
-        mix-data="[id='{{ item['_key'] }}']"
-        mix-post="/toggle_item_state"
-        mix-await="Blocking..."
-    >
-        Block
-    </button>
-</form>
     </div>
 </div>
