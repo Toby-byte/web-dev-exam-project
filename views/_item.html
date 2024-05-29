@@ -16,7 +16,8 @@
     </a>
 
  
-    <div>
+
+<div>
         <span class="font-medium">
             % price = int(item["item_price_per_night"])
             % price = "{:,.0f}".format(price).replace(",", ".")
@@ -25,17 +26,17 @@
         <span>
             nat
         </span>
-        % if get("is_logged", False):
-            <form id="{{rooms['_key']}}">
-                <input name="item_id" type="text" value="{{item['_key']}}">
-                <button
-                    mix-data="[id='{{item['_key']}}']"
-                    mix-post="/toogle_item_block"
-                >
-                    Block
-                </button>
-            </form>
-        % end
+        
+<form id="{{ item['_key'] }}">
+    <input name="item_id" type="hidden" value="{{ item['_key'] }}">
+    <input type="hidden" name="button_text" value="{% if item['blocked'] %}Unblock{% else %}Block{% endif %}">
+    <button
+        mix-data="[id='{{ item['_key'] }}']"
+        mix-post="/toggle_item_state"
+        mix-await="Blocking..."
+    >
+        Block
+    </button>
+</form>
     </div>
-
 </div>

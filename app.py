@@ -354,6 +354,57 @@ def _():
     finally:
         pass
     
+    
+
+
+@post("/toggle_item_state")
+def toggle_item_state():
+    try:
+        item_id = request.forms.get("item_id", '')
+        current_button_text = request.forms.get("button_text", '')  # Get the current text of the button
+        
+        # Determine the new button text based on the current text
+        if current_button_text == "Unblock":
+            new_button_text = "Block"
+            item_status = "Property is unblocked"
+            blocked = False  # Update the block state in the database
+        else:
+            new_button_text = "Unblock"
+            item_status = "Property is blocked"
+            blocked = True   # Update the block state in the database
+        
+        # Update the item status in the database
+        query = {
+            "query": """
+                UPDATE { _key: @item_id, blocked: @blocked }
+                IN items
+                RETURN NEW
+            """,
+            "bindVars": {"item_id": item_id, "blocked": blocked}
+        }
+        x.arango(query)
+        
+        # Return HTML content to update the button
+        return f"""
+        <template mix-target="[id='{item_id}']" mix-replace>
+            <form id="{item_id}">
+                <input name="item_id" type="hidden" value="{item_id}">
+                <input type="hidden" name="button_text" value="{new_button_text}">
+                <p>{item_status}</p>
+                <button
+                    mix-data="[id='{item_id}']"
+                    mix-post="/toggle_item_state"
+                >
+                    {new_button_text}
+                </button>
+            </form>
+        </template>
+        """
+    except Exception as ex:
+        ic(ex)
+        return str(ex)
+    finally:
+        pass
 ##############################
 @get("/arango/items")
 def _():
