@@ -685,23 +685,20 @@ def add_item():
 
         # Generate random filename for splash image
         splash_image_filename = f"{x.generate_random_string()}_{item_splash_image.filename}"
+    
         splash_image_path = os.path.join(UPLOAD_DIR, splash_image_filename)
         item_splash_image.save(splash_image_path)
 
         # Process additional images
         image2 = request.files.get("image2")
-        image3 = request.files.get("image3")
+        image2_filename = f"{x.generate_random_string()}_{image2.filename}"
+        image2_path = os.path.join(UPLOAD_DIR, image2_filename)
+        image2.save(image2_path)
         
-        images = [item_splash_image, image2, image3]
-        image_paths = []
-
-        for image in images:
-            if image and image.filename:
-                # Generate random filename for each image
-                image_filename = f"{x.generate_random_string()}_{image.filename}"
-                save_path = os.path.join(UPLOAD_DIR, image_filename)
-                image.save(save_path)
-                image_paths.append(save_path)
+        image3 = request.files.get("image3")
+        image3_filename = f"{x.generate_random_string()}_{image3.filename}"
+        image3_path = os.path.join(UPLOAD_DIR, image3_filename)
+        image3.save(image3_path)
 
         # Create item data
         item = {
@@ -713,7 +710,9 @@ def add_item():
             "item_price_per_night": int(item_price_per_night),
             "item_created_at": int(time.time()),
             "item_updated_at": 0,
-            "item_images": [os.path.basename(path) for path in image_paths]
+            "item_image2": image2_filename,
+            "item_image3": image3_filename
+
         }
 
         # Save item to the database
@@ -761,7 +760,7 @@ def _(key):
 
 ##############################
 @post('/edit_item/<key>')
-def update_item(key):
+def update_item(key):    
     try:
         item_name = request.forms.get('item_name')
         item_price_per_night = request.forms.get('item_price_per_night')
@@ -770,7 +769,28 @@ def update_item(key):
         image2 = request.files.get('image2')
         image3 = request.files.get('image3')
 
-        # Fetch the existing item to get the current image filenames
+        # Process splash image
+        if item_splash_image and item_splash_image.filename:
+            splash_image_filename = f"{x.generate_random_string()}_{item_splash_image.filename}"
+            splash_image_path = os.path.join(UPLOAD_DIR, splash_image_filename)
+            item_splash_image.save(splash_image_path)
+        else:
+            splash_image_filename = None
+
+        # Process additional images
+        image2_filename = None
+        if image2 and image2.filename:
+            image2_filename = f"{x.generate_random_string()}_{image2.filename}"
+            image2_path = os.path.join(UPLOAD_DIR, image2_filename)
+            image2.save(image2_path)
+
+        image3_filename = None
+        if image3 and image3.filename:
+            image3_filename = f"{x.generate_random_string()}_{image3.filename}"
+            image3_path = os.path.join(UPLOAD_DIR, image3_filename)
+            image3.save(image3_path)
+
+        # Fetch the existing item to delete old images if necessary
         query = {
             "query": "FOR item IN items FILTER item._key == @key RETURN item",
             "bindVars": {"key": key}
@@ -783,20 +803,21 @@ def update_item(key):
         
         item = items[0]  # There should be only one item with the specified ID
 
-        # Use the existing filenames if new images are not uploaded
-        splash_image_filename = item.get('item_splash_image')
-        image2_filename = item.get('image2')
-        image3_filename = item.get('image3')
-
-        # Save the new images with existing filenames if provided
-        if item_splash_image and item_splash_image.filename:
-            splash_image_filename = save_image(item_splash_image)
+        # Delete old images if new ones are uploaded
+        if splash_image_filename and item.get('item_splash_image'):
+            old_image_path = os.path.join(UPLOAD_DIR, item['item_splash_image'])
+            if os.path.exists(old_image_path):
+                os.remove(old_image_path)
         
-        if image2 and image2.filename:
-            image2_filename = save_image(image2)
+        if image2_filename and item.get('image2'):
+            old_image_path = os.path.join(UPLOAD_DIR, item['image2'])
+            if os.path.exists(old_image_path):
+                os.remove(old_image_path)
         
-        if image3 and image3.filename:
-            image3_filename = save_image(image3)
+        if image3_filename and item.get('image3'):
+            old_image_path = os.path.join(UPLOAD_DIR, item['image3'])
+            if os.path.exists(old_image_path):
+                os.remove(old_image_path)
 
         # Update the item in the database
         update_query = {
@@ -809,26 +830,28 @@ def update_item(key):
                 item_lat: @item_lat,
                 item_lon: @item_lon,
                 item_stars: @item_stars,
-                "item_images": @item_images,
-                item_updated_at: @item_updated_at
+                item_updated_at: @item_updated_at,
+                image2: @image2,
+                image3: @image3
             } IN items
             """,
             "bindVars": {
                 "key": key,
                 "item_name": item_name,
                 "item_price_per_night": int(item_price_per_night),
-                "item_splash_image": splash_image_filename,
-                "item_lat": random.uniform(55.6, 55.7),
-                "item_lon": random.uniform(12.5, 12.6),
+                "item_splash_image": splash_image_filename or item.get('item_splash_image'),
+                "item_lat": round(random.uniform(55.65, 55.7), 4),
+                "item_lon": round(random.uniform(12.55, 12.6), 4),
                 "item_stars": round(random.uniform(3.0, 5.0), 1),
-                "item_images": [os.path.basename(path) for path in image_paths],
                 "item_updated_at": int(time.time()),
+                "image2": image2_filename or item.get('image2'),
+                "image3": image3_filename or item.get('image3')
             }
         }
 
         x.arango(update_query)
         
-        return redirect(f'/edit_property/{key}')
+        return "Item updated successfully"
     except Exception as ex:
         return {"error": str(ex)}
 
