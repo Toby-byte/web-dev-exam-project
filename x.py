@@ -7,9 +7,8 @@ import requests
 import json
 import smtplib
 from email.mime.text import MIMEText
-import random
 import string
-
+import random
 
 ITEMS_PER_PAGE = 2
 COOKIE_SECRET = "41ebeca46f3b-4d77-a8e2-554659075C6319a2fbfb-9a2D-4fb6-Afcad32abb26a5e0"
@@ -309,24 +308,6 @@ def setup_users():
         print(ex)
     finally:
         pass
-##############################
-def send_reset_email(email, key):
-    from_email = 'joeybidenisbased@gmail.com'
-    from_password = 'tdvi euik qgsa bzdf'
-
-    domain = request.urlparts.scheme + "://" + request.urlparts.netloc
-    reset_link = f"{domain}/reset-password/{key}"
-    msg = MIMEText(f"Click the link to reset your password: {reset_link}")
-    msg["Subject"] = "Password Reset Request"
-    msg["From"] = from_email
-    msg["To"] = email
-
-    server = smtplib.SMTP('smtp.gmail.com:587')
-    server.ehlo('Gmail')
-    server.starttls()
-    server.login(from_email, from_password)
-    server.sendmail(msg["From"], [msg["To"]], msg.as_string())
-
 ##############################
 def send_reset_email(email, key):
     from_email = 'joeybidenisbased@gmail.com'
