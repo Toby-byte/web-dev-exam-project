@@ -67,7 +67,7 @@ def home():
         x.setup_collection()
         # Fetch items from the ArangoDB collection 'items'
         query = {
-            "query": "FOR item IN items SORT item.item_created_at LIMIT @limit RETURN item",
+            "query": "FOR item IN items LET isBlocked = HAS(item, 'blocked') ? item.blocked : false UPDATE item WITH { blocked: isBlocked } IN items SORT item.item_created_at LIMIT @limit RETURN item",
             "bindVars": {"limit": x.ITEMS_PER_PAGE}
         }
         result = x.arango(query)
@@ -855,6 +855,32 @@ def update_item(key):
     except Exception as ex:
         return {"error": str(ex)}
 
+##############################
+@post("/block_item/<key>")
+def _(key):
+    try:
+
+        ic(key)
+        res = x.arango({
+            "query": """
+                FOR item IN items
+                FILTER item._key == @key
+                UPDATE item WITH { blocked: true } IN items RETURN NEW
+            """, 
+            "bindVars": {"key": key}
+        })
+        ic(res)
+
+        return f"""
+        <template mix-target="[id='{key}']" mix-replace>
+            <div class="mix-fade-out user_deleted" mix-ttl="2000">User blocked</div>
+        </template>
+        """
+    except Exception as ex:
+        ic(ex)
+        return "An error occurred"
+    finally:
+        pass
 ##############################
 try:
     import production
