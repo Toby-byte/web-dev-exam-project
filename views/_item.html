@@ -26,16 +26,10 @@
         <span>
             nat
         </span>
-        % if get("is_logged", False):
-            <form id="{{rooms['_key']}}">
-                <input name="item_id" type="text" value="{{item['_key']}}">
-                <button
-                    mix-data="[id='{{item['_key']}}']"
-                    mix-post="/toogle_item_block"
-                >
-                    Block
-                </button>
-            </form>
-        % end
+        <form action="/block_item/{{item['_key']}}" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="key" value="{{ item['_key'] }}">
+            <input type="hidden" name="blocked" value="{{ 'true' if item['blocked'] else 'false' }}">
+            <button type="submit">{{ 'unblock' if item['blocked'] else 'block' }}</button>
+        </form>
     </div>
 </div>

@@ -41,11 +41,12 @@
             <button class="mb-4">
                 Block
             </button>
-            <form action="/toggle_booking" method="post">
-    <input type="hidden" name="item_id" value="{{ item['_key'] }}">
-    <button type="submit">{{ 'Unbook' if item.get('is_booked') else 'Book' }}</button>
-           </form>
+            <form class ="mt-4" action="/toggle_booking" method="post">
+                <input type="hidden" name="item_id" value="{{ item['_key'] }}">
+                <button type="submit">{{ 'Unbook' if item.get('is_booked') else 'Book' }}</button>
+            </form>
         </aside>
     </section>
 </main>
 % include("_footer")
+
