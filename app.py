@@ -438,7 +438,9 @@ def _():
                                     FOR user IN users 
                                     LET isBlocked = HAS(user, 'blocked') ? user.blocked : false
                                     FILTER isBlocked != true 
-                                    UPDATE user WITH { blocked: isBlocked } IN users 
+                                    UPDATE user WITH { blocked: isBlocked } IN users
+                                    FILTER item.blocked == true
+                                    UPDATE item WITH { blocked: false } IN items
                                     RETURN NEW
                             """}
         blocked_query = {"query": "FOR user IN users FILTER user.blocked == true RETURN user"}
@@ -865,17 +867,14 @@ def _(key):
             "query": """
                 FOR item IN items
                 FILTER item._key == @key
-                UPDATE item WITH { blocked: true } IN items RETURN NEW
+                UPDATE item WITH { blocked: item.blocked == true ? false : true } IN items
             """, 
             "bindVars": {"key": key}
         })
         ic(res)
 
-        return f"""
-        <template mix-target="[id='{key}']" mix-replace>
-            <div class="mix-fade-out user_deleted" mix-ttl="2000">User blocked</div>
-        </template>
-        """
+        response.status = 303 
+        response.set_header('Location', '/')
     except Exception as ex:
         ic(ex)
         return "An error occurred"
