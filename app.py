@@ -1,10 +1,6 @@
-# path to bottle main package to replace with own bottle
-# /home/mysite/.local/lib/python3.10/site-packages/bottle.py
-
-# from bottle import default_app, put, delete, get, post, response, run, static_file, template
-# import pathlib
-# import sys
-# sys.path.insert(0, str(pathlib.Path(__file__).parent.resolve())+"/bottle")
+import smtplib, ssl
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from bottle import default_app, put, delete, get, post, request, response, run, static_file, template
 import x, re, os, time
 from icecream import ic
@@ -29,6 +25,13 @@ def validate_user_logged():
         return True
     else:
         return False
+    
+def validate_user_role():
+    user_role = request.get_cookie("role")
+    if user_role == "partner":
+        return True
+    else:
+        return False
 
 ##############################
 @get("/app.css")
@@ -46,7 +49,6 @@ def _(file_name):
 @get("/test")
 def _():
     return [{"name":"one"}]
-
 
 ##############################
 @get("/images/<item_splash_image>")
@@ -74,9 +76,13 @@ def home():
         items = result.get("result", [])
         ic(items)
         is_logged = validate_user_logged()
+        print("user is logged in?: ")
         print(is_logged)
+        is_role = validate_user_role()
+        print("is user a partner?: ")
+        print(is_role)
 
-        return template("index.html", items=items, mapbox_token=credentials.mapbox_token, is_logged=is_logged)
+        return template("index.html", items=items, mapbox_token=credentials.mapbox_token, is_logged=is_logged, is_role=is_role)
     except Exception as ex:
         ic(ex)
         return str(ex)
@@ -86,7 +92,8 @@ def home():
 @get("/signup")
 def _():
     try:
-        return template("signup_wu_mixhtml.html")
+        is_role = validate_user_role()
+        return template("signup_wu_mixhtml.html", is_role=is_role)
     except Exception as ex:
         print("there was a problem loading the page")
         print(ex)
@@ -107,13 +114,37 @@ def _():
         ic(username) # this is ice cream it displays error codes when something goes wrong
         ic(password)
         ic(email) # this is ice cream it displays error codes when something goes wrong
+        
+        res = {
+            "query": "FOR user IN users FILTER user.user_email == @user_email RETURN user",
+            "bindVars": {"user_email": email}
+        }
+        query_result = x.arango(res)
+        users = query_result.get("result", [])
+
+        if users:
+            for user in users:
+                user_email = user.get("user_email")
+
+                if user_email == email:
+                    return "user already exists"
+        
+        
         # Hash the password using bcrypt
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-        user = {"username": username, "user_email": email, "user_password": hashed_password.decode('utf-8'), "role": selected_option, "verification_code": verification_code, "verified": False} # Save the hashed password
+        user = {"username": username, 
+                "user_email": email, 
+                "user_password": hashed_password.decode('utf-8'), 
+                "role": selected_option, 
+                "verification_code": verification_code, 
+                "verified": False,
+                "is_deleted": False} # Save the hashed password
         res = {"query": "INSERT @doc IN users RETURN NEW", "bindVars": {"doc": user}} # inserts a user via AQL query language, via the db method in the x.py file 
         item = x.arango(res)
         send_verification_email(email, verification_code)
-        return template("login.html")
+        response.status = 303
+        response.set_header('Location', '/login')
+        return
     except Exception as ex:
         ic(ex)
         if "user_name" in str(ex):
@@ -165,16 +196,6 @@ def _():
         res = {"query":"INSERT @doc IN users RETURN NEW", "bindVars":{"doc":user}} # inserts a user via AQL query language, via the db method in the x.py file
         item = x.arango(res)
         return item
-        # html = template("_user.html", user=res["result"][0]) # not sure, a HTML template that is used for displaying a user?
-        # form_create_user =  template("_form_create_user.html") # template again
-        # return f"""
-        # <template mix-target="#users" mix-top>
-        #     {html}
-        # </template>
-        # <template mix-target="#frm_user" mix-replace>
-        #     {form_create_user}
-        # </template>
-        # """
     except Exception as ex:
         ic(ex)
         if "username" in str(ex):
@@ -243,7 +264,8 @@ def _(page_number):
 @get("/login")
 def login():
     x.no_cache()
-    return template("login_wu_mixhtml.html")
+    is_role = validate_user_role()
+    return template("login_wu_mixhtml.html", is_role=is_role)
 
 sessions = {}
 
@@ -264,18 +286,31 @@ def login_post():
 
         if users:
             for user in users:
-                stored_hashed_password = user.get("user_password")
+                user_verified_status = user.get("verified")
+                print(user_verified_status)
 
-                # Verify the provided password with the stored hashed password
-                if bcrypt.checkpw(user_password.encode('utf-8'), stored_hashed_password.encode('utf-8')):
-                    user_session_id = str(uuid.uuid4())
-                    sessions[user_session_id] = user
-                    print("#"*30)
-                    print(sessions)
-                    response.set_cookie("user_session_id", user_session_id)
-                    return home()
-
-        return login()
+                if user_verified_status == True:
+                    stored_hashed_password = user.get("user_password")
+                    user_role = user.get("role")
+                    user_id = user.get("_key")
+                    
+                    # Verify the provided password with the stored hashed password
+                    if bcrypt.checkpw(user_password.encode('utf-8'), stored_hashed_password.encode('utf-8')):
+                        user_session_id = str(uuid.uuid4())
+                        sessions[user_session_id] = user
+                        print("#"*30)
+                        print(sessions)
+                        response.set_cookie("user_session_id", user_session_id)
+                        response.set_cookie("role", user_role)
+                        response.set_cookie("user_id", user_id)
+                        response.status = 303
+                        response.set_header('Location', '/')
+                        return
+                else:
+                    return "Only Verified users can login"
+        response.status = 303
+        response.set_header('Location', '/login')
+        return
         # return "login failed - incorrect email or password"
     except Exception as ex:
         print("An error occurred:", ex)
@@ -286,20 +321,161 @@ def login_post():
 @get("/profile")
 def _():
     try:
-        x.no_cache()
-        x.validate_user_logged()
-        db = x.db()
-        q = db.execute("SELECT * FROM items ORDER BY item_created_at LIMIT 0, ?", (x.ITEMS_PER_PAGE,))
-        items = q.fetchall()
-        ic(items)    
-        return template("profile.html", is_logged=True, items=items)
+        user_session_id = request.get_cookie("user_session_id")
+        if user_session_id not in sessions:
+            return "You are not logged in"
+            response.set_header('Location', '/login')
+            return
+        
+        user = sessions[user_session_id]
+        is_role = validate_user_role()
+        return template("user_profile", user=user, is_role=is_role)
     except Exception as ex:
         ic(ex)
-        response.status = 303 
-        response.set_header('Location', '/login')
+        return {"error": str(ex)}
+
+##############################
+
+@post("/update_profile")
+def update_profile():
+    try:
+        user_session_id = request.get_cookie("user_session_id")
+        if user_session_id not in sessions:
+            response.status = 303
+            response.set_header('Location', '/login')
+            return
+        
+        user = sessions[user_session_id]
+
+        username = request.forms.get("user_name")    
+        user_email = request.forms.get("user_email")
+        user_password = request.forms.get("user_password")
+
+        if user_password:
+            hashed_password = bcrypt.hashpw(user_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        else:
+            hashed_password = user["user_password"]
+
+        user["username"] = username
+        user["user_email"] = user_email
+        user["user_password"] = hashed_password
+
+        update_query = {
+            "query": """
+                FOR user IN users
+                FILTER user._key == @key
+                UPDATE user WITH { 
+                    username: @username, 
+                    user_email: @user_email, 
+                    user_password: @user_password 
+                } IN users    
+                RETURN NEW
+            """,
+            "bindVars": {
+                "key": user["_key"],
+                "username": username,
+                "user_email": user_email,
+                "user_password": hashed_password
+            }
+        }
+
+        result = x.arango(update_query)
+        updated_user = result.get("result", [])[0]
+        sessions[user_session_id] = updated_user
+        response.status = 303
+        response.set_header('Location', '/profile')
         return
-    finally:
-        if "db" in locals(): db.close()
+    except Exception as ex:
+        ic(ex)
+        return str(ex)
+    
+@get("/partner_properties")
+def _():
+    return template("_youreproperty.html")
+
+##############################
+@post("/verification_email_delete")
+def send_verification_email_delete():
+    user_email = request.forms.get("user_email")
+    print(user_email)
+    user_password = request.forms.get("user_password")
+    print(user_password)
+    sender_email = "skroyer09@gmail.com"
+    password = "vkxq xwhj yaxn rqjs"
+
+    message = MIMEMultipart("alternative")
+    message["Subject"] = "Verify your email address"
+    message["From"] = sender_email
+    message["To"] = user_email
+
+
+    text = f"""\
+    Hi,
+    Please verify deletion of your account by clicking the link
+    """
+    html = f"""\
+    <html>
+      <body>
+        <p>Hi,<br>
+          Please verify deletion of your account by clicking the link below:<br>
+          <a href="http://127.0.0.1/Verify_delete?code={user_email}">Verify Email</a>
+        </p>
+      </body>
+    </html>
+    """
+
+    # Turn these into plain/html MIMEText objects
+    part1 = MIMEText(text, "plain")
+    part2 = MIMEText(html, "html")
+
+    # Add HTML/plain-text parts to MIMEMultipart message
+    # The email client will try to render the last part first
+    message.attach(part1)
+    message.attach(part2)
+
+    # Create secure connection with server and send email
+    context = ssl.create_default_context()
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+        server.login(sender_email, password)
+        server.sendmail(sender_email, user_email, message.as_string())
+    return home()
+
+@get("/Verify_delete")
+def login_post():
+    try:
+        user_email = request.query.code
+
+        res = {
+            "query": "FOR user IN users FILTER user.user_email == @user_email UPDATE user WITH { is_deleted: true } IN users",
+            "bindVars": {"user_email": user_email}
+        }
+        query_result = x.arango(res)
+        users = query_result.get("result", [])
+
+        return "You account has been deleted. You can go back to the homepage now <a href='/'>Homepage</a>."
+        # return "login failed - incorrect email or password"
+    except Exception as ex:
+        print("An error occurred:", ex)
+        return "An error occurred while processing your request"
+
+# ##############################
+# @get("/profile")
+# def _():
+#     try:
+#         x.no_cache()
+#         x.validate_user_logged()
+#         db = x.db()
+#         q = db.execute("SELECT * FROM items ORDER BY item_created_at LIMIT 0, ?", (x.ITEMS_PER_PAGE,))
+#         items = q.fetchall()
+#         ic(items)    
+#         return template("profile.html", is_logged=True, items=items)
+#     except Exception as ex:
+#         ic(ex)
+#         response.status = 303 
+#         response.set_header('Location', '/login')
+#         return
+#     finally:
+#         if "db" in locals(): db.close()
 
 
 ##############################
@@ -422,10 +598,11 @@ def _(id):
         ic(item)
         is_logged = validate_user_logged()
         print(is_logged)
+        is_role = validate_user_role()
         return template("rooms",
                         id=id, 
                         title=title,
-                        item=item, is_logged=is_logged)
+                        item=item, is_logged=is_logged, is_role=is_role)
     except Exception as ex:
         ic(ex)
         return {"error": str(ex)}
@@ -601,11 +778,11 @@ def handle_reset_password(key):
         if password != confirm_password:
             return "Passwords do not match"
         
-        hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
         update_query = {
             "query": """
-                UPDATE { _key: @key, password: @password }
+                UPDATE { _key: @key, user_password: @password }
                 IN users
             """,
             "bindVars": {
@@ -722,13 +899,12 @@ def add_item():
             "query": "INSERT @item INTO items RETURN NEW",
             "bindVars": {"item": item}
         }
-        result = x.arango(query)
+        x.arango(query)
 
         return "Item added successfully"
     except Exception as ex:
         print("An error occurred:", ex)
         return f"An error occurred: {str(ex)}"
-
     finally:
         pass
 ##############################
@@ -833,8 +1009,8 @@ def update_item(key):
                 item_lon: @item_lon,
                 item_stars: @item_stars,
                 item_updated_at: @item_updated_at,
-                image2: @image2,
-                image3: @image3
+                item_image2: @image2,
+                item_image3: @image3
             } IN items
             """,
             "bindVars": {
@@ -846,8 +1022,8 @@ def update_item(key):
                 "item_lon": round(random.uniform(12.55, 12.6), 4),
                 "item_stars": round(random.uniform(3.0, 5.0), 1),
                 "item_updated_at": int(time.time()),
-                "image2": image2_filename or item.get('image2'),
-                "image3": image3_filename or item.get('image3')
+                "item_image2": image2_filename or item.get('image2'),
+                "item_image3": image3_filename or item.get('image3')
             }
         }
 
@@ -856,7 +1032,8 @@ def update_item(key):
         return "Item updated successfully"
     except Exception as ex:
         return {"error": str(ex)}
-
+    finally:
+        pass
 ##############################
 @post("/block_item/<key>")
 def _(key):
@@ -880,6 +1057,7 @@ def _(key):
         return "An error occurred"
     finally:
         pass
+
 ##############################
 try:
     import production

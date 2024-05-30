@@ -34,13 +34,18 @@
 
         <div class="flex gap-4 ml-auto">
 
-            <a href="/arango" class="{{ get('active_arango', '') }}">
-                Arango
+            <a href="/profile">
+                Profile
             </a>
 
-            <a href="/signup" class="{{ get('active_login', '') }}">
-                Your property
-            </a>
+            % if get("is_role", True):
+                <a href="/partner_properties" class="{{ get('active_login', '') }}">
+                    Your property
+                </a>
+            % else:
+                <a href="">
+                </a>
+            % end
 
             % if get("is_logged", False):
                 <a href="/logout">
