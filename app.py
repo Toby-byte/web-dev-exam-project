@@ -348,12 +348,16 @@ def _():
 
 
 
+###############
+# booking
 
 @post("/toggle_booking")
 def toggle_booking():
     try:
         item_id = request.forms.get("item_id")
-        
+        if not item_id:
+            raise ValueError("Item ID is required")
+
         # Fetch the current booking status
         query = {
             "query": "FOR item IN items FILTER item._key == @item_id RETURN item",
@@ -367,7 +371,7 @@ def toggle_booking():
 
         item = items[0]
         current_booking_status = item.get("is_booked", False)
-        
+
         # Toggle the booking status
         new_booking_status = not current_booking_status
         update_query = {
@@ -377,10 +381,13 @@ def toggle_booking():
             """,
             "bindVars": {"item_id": item_id, "new_booking_status": new_booking_status}
         }
-        x.arango(update_query)
+        update_result = x.arango(update_query)
+        updated_items = update_result.get("result", [])
 
-        # Fetch updated item
-        updated_item = x.arango(query).get("result", [])[0]
+        if not updated_items:
+            raise RuntimeError("Failed to update booking status")
+
+        updated_item = updated_items[0]
 
         return template("rooms", id=item_id, title=f"Item {item_id}", item=updated_item)
     except Exception as ex:
