@@ -2,7 +2,7 @@ import smtplib, ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from bottle import default_app, put, delete, get, post, request, response, run, static_file, template
-import x, re, os, time
+import x, re
 from icecream import ic
 import bcrypt
 import json
@@ -615,9 +615,7 @@ def _():
                                     FOR user IN users 
                                     LET isBlocked = HAS(user, 'blocked') ? user.blocked : false
                                     FILTER isBlocked != true 
-                                    UPDATE user WITH { blocked: isBlocked } IN users
-                                    FILTER item.blocked == true
-                                    UPDATE item WITH { blocked: false } IN items
+                                    UPDATE user WITH { blocked: isBlocked } IN users 
                                     RETURN NEW
                             """}
         blocked_query = {"query": "FOR user IN users FILTER user.blocked == true RETURN user"}
